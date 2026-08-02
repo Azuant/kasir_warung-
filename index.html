@@ -3,118 +3,177 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WARUNG IRWAN MARINIR - KASIR PRO V6.9.7</title>
-<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<title>Kasir Warung - Firebase</title>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
 <style>
-:root{--bg:#f5f5f5; --box:#fff; --text:#000; --primary:#1565c0; --border:#ddd;}
-body.dark{--bg:#121212; --box:#1e1e1e; --text:#e0e0e0; --primary:#42a5f5; --border:#333;}
-*{box-sizing:border-box}
-body{font-family:'Segoe UI',Arial; margin:0; background:var(--bg); color:var(--text)}
-
-/* HEADER BARU TULISAN JALAN */
-.header{background:var(--primary); color:white; padding:0; text-align:left; font-size:18px; font-weight:bold; position:sticky; top:0; z-index:10; height:50px; overflow:hidden}
-.running-text{width:calc(100% - 110px); white-space:nowrap; overflow:hidden; line-height:50px}
-.running-text span{display:inline-block; padding-left:100%; animation:jalan 10s linear infinite; font-size:20px; letter-spacing:2px}
-@keyframes jalan{0%{transform:translateX(0)} 100%{transform:translateX(-100%)}}
-.btn-header{position:absolute; top:8px; right:10px; z-index:11; display:flex; gap:5px}
-
-.wrap{padding:10px; max-width:1200px; margin:auto}
-.box{background:var(--box); border-radius:10px; padding:15px; margin-bottom:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1); border:1px solid var(--border)}
-input,button{width:100%; padding:12px; margin:5px 0; border-radius:8px; border:1px solid var(--border); font-size:16px; background:var(--box); color:var(--text)}
-button{background:var(--primary); color:white; border:none; font-weight:bold; cursor:pointer; transition:0.2s}
-button:hover{opacity:0.85}
-button.hijau{background:#2e7d32} button.merah{background:#c62828} button.kuning{background:#f9a825; color:#000} button.ungu{background:#6a1b9a} button.biru{background:#0277bd} button.orange{background:#e65100}
-.menu{display:grid; grid-template-columns:repeat(5, 1fr); gap:8px}
-.list{max-height:400px; overflow-y:auto; border:1px solid var(--border); border-radius:8px}
-.item{display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid var(--border); gap:10px}
-.btn-group{display:flex; gap:8px}
-.btn-group button{width:auto; padding:8px 14px; font-size:14px; margin:0}
-.badge{background:#c62828; color:white; padding:2px 6px; border-radius:12px; font-size:11px; margin-left:5px; font-weight:bold}
-.badge.kuning{background:#f9a825; color:#000}
-.badge.hijau{background:#2e7d32}
-.total{font-size:32px; color:var(--primary); font-weight:bold; text-align:center}
-.keranjang-item{display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px dashed var(--border)}
-.hidden{display:none}
-#struk{font-family:monospace; font-size:14px; white-space:pre-line; background:var(--bg); padding:10px; border-radius:8px}
-canvas{background:var(--box); border-radius:8px; padding:10px; width:100%}
-#reader-kasir, #reader-barang{width:100%; border-radius:10px; overflow:hidden; margin-top:10px; min-height:250px; background:#000; position:relative; z-index:999}
-.filter-box{padding:10px; background:var(--bg); border-radius:8px; margin:10px 0}
-
-/* LOGIN */
-#halamanLogin{position:fixed; top:0; left:0; width:100%; height:100%; background:var(--primary); display:flex; justify-content:center; align-items:center; z-index:9999}
-.loginBox{background:var(--box); padding:30px; border-radius:15px; width:90%; max-width:400px; box-shadow:0 5px 20px rgba(0,0,0,0.3)}
-.loginBox h2{text-align:center; margin-bottom:20px; color:var(--primary)}
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial}
+body{background:#f0f2f5}
+#loginBox{position:fixed;top:0;left:0;width:100%;height:100%;background:#1a3a6e;display:flex;align-items:center;justify-content:center;z-index:999}
+.login-card{background:white;padding:30px;border-radius:10px;width:90%;max-width:350px}
+input{width:100%;padding:10px;margin:8px 0;border:1px solid #ddd;border-radius:5px}
+.btn{width:100%;padding:12px;background:#28a745;color:white;border:none;border-radius:5px;cursor:pointer;font-size:16px}
+.btn:hover{opacity:0.9}
+.container{display:none;padding:15px;max-width:1200px;margin:auto}
+.header{display:flex;justify-content:space-between;align-items:center;background:#1a3a6e;color:white;padding:15px;border-radius:8px;margin-bottom:15px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.card{background:white;padding:15px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.1)}
+.produk{display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid #eee;cursor:pointer}
+.produk:hover{background:#f8f9fa}
+.keranjang-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee}
+.total{font-size:20px;font-weight:bold;text-align:right;margin-top:10px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px;text-align:left;border-bottom:1px solid #ddd}
+@media(max-width:768px){.grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 
-<div id="halamanLogin">
-  <div class="loginBox">
-    <h2>🔒 LOGIN KASIR</h2>
-    <input id="userLogin" type="text" placeholder="Username: admin" value="admin">
-    <input id="passLogin" type="password" placeholder="Password: P" value="P">
-    <button class="hijau" onclick="cekLogin()">MASUK</button>
-    <p style="text-align:center; font-size:12px; margin-top:10px">Default: admin / P</p>
+<div id="loginBox">
+  <div class="login-card">
+    <h2 style="text-align:center;margin-bottom:15px">Login Kasir</h2>
+    <input type="email" id="email" placeholder="Email" value="karnotoazuant@gmail.com">
+    <input type="password" id="password" placeholder="Password">
+    <button class="btn" onclick="login()">Login</button>
+    <p id="err" style="color:red;text-align:center;margin-top:10px"></p>
   </div>
 </div>
 
-<div id="appUtama" class="hidden">
-<div class="header">
-  <div class="running-text">
-    <span id="namaWarungHeader">WARUNG IRWAN MARINIR - SELAMAT DATANG</span>
+<div class="container" id="app">
+  <div class="header">
+    <h2>Kasir Warung</h2>
+    <div><span id="userEmail"></span> | <button style="background:#dc3545" class="btn" onclick="logout()">Logout</button></div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>📦 Daftar Produk</h3>
+      <input id="cari" placeholder="Cari produk..." onkeyup="tampilProduk()">
+      <div id="listProduk" style="max-height:400px;overflow-y:auto;margin-top:10px"></div>
+      <hr style="margin:15px 0">
+      <h4>+ Tambah Produk</h4>
+      <input id="namaBarang" placeholder="Nama Barang">
+      <input id="hargaBarang" type="number" placeholder="Harga">
+      <button class="btn" onclick="tambahProduk()">Simpan Produk</button>
+    </div>
+
+    <div class="card">
+      <h3>🛒 Keranjang</h3>
+      <div id="listKeranjang" style="min-height:300px"></div>
+      <div class="total">Total: Rp <span id="total">0</span></div>
+      <button class="btn" style="background:#007bff;margin-top:10px" onclick="bayar()">Bayar & Simpan</button>
+      <button class="btn" style="background:#dc3545;margin-top:5px" onclick="kosongkan()">Kosongkan</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:15px">
+    <h3>📚 Riwayat Transaksi</h3>
+    <table id="tabelRiwayat"><thead><tr><th>Tanggal</th><th>Total</th><th>Item</th></tr></thead><tbody></tbody></table>
   </div>
 </div>
-<div class="btn-header">
-  <button onclick="logout()" style="width:auto; padding:8px 12px; background:#c62828">🚪</button>
-  <button onclick="toggleTema()" style="width:auto; padding:8px 12px">🌙</button>
-</div>
 
-<div class="wrap">
-  <div class="box menu">
-    <button onclick="show('kasir')">KASIR</button>
-    <button class="hijau" onclick="show('barang')">BARANG</button>
-    <button class="kuning" onclick="show('laporan')">LAPORAN</button>
-    <button class="ungu" onclick="show('grafik')">GRAFIK</button>
-    <button class="merah" onclick="show('setting')">SETTING</button>
-  </div>
-  <div id="kasir" class="box">
-    <button class="ungu" onclick="toggleScanner('kasir')">📷 SCAN BARCODE</button>
-    <div id="reader-kasir" class="hidden"><button class="merah" onclick="stopScanner()" style="position:absolute; top:10px; right:10px; width:auto; z-index:1000">TUTUP KAMERA</button></div>
-    <input id="cari" type="text" placeholder="🔍 Cari nama barang..." onkeyup="tampilKasir()">
-    <div id="listBarangKasir" class="list"></div>
-    <hr><h3>KERANJANG</h3><div id="keranjang">Kosong</div>
-    <h2 class="total">TOTAL: Rp<span id="total">0</span></h2>
-    <input id="bayar" type="number" placeholder="Uang Bayar" onkeyup="hitungKembali()">
-    <p>Kembali: Rp<span id="kembali">0</span></p>
-    <button class="hijau" onclick="bayar()">BAYAR & CETAK STRUK</button>
-    <button class="orange" onclick="printUlang()">🖨️ PRINT ULANG STRUK TERAKHIR</button>
-    <button class="merah" onclick="batal()">BATAL TRANSAKSI</button>
-    <div id="struk" class="hidden"></div>
-  </div>
-  <div id="barang" class="box hidden">
-    <h3>TAMBAH / EDIT BARANG</h3>
-    <button class="biru" onclick="toggleScanner('barang')">📷 SCAN BARCODE</button>
-    <div id="reader-barang" class="hidden"><button class="merah" onclick="stopScanner()" style="position:absolute; top:10px; right:10px; width:auto; z-index:1000">TUTUP KAMERA</button></div>
-    <input id="kode" placeholder="Kode Barcode - bisa di scan atau ketik">
-    <input id="nama" placeholder="Nama Barang">
-    <input id="harga" type="number" placeholder="Harga Jual">
-    <input id="stok" type="number" placeholder="Stok">
-    <button class="hijau" onclick="simpanBarang()">SIMPAN BARANG</button>
-    <hr><h3>DAFTAR BARANG</h3><div id="listBarang" class="list"></div>
-  </div>
-  <div id="laporan" class="box hidden">
-    <h3>📊 LAPORAN</h3>
-    <p><b>Total Penjualan:</b> Rp<span id="totalJual">0</span></p>
-    <p><b>Jumlah Transaksi:</b> <span id="jmlTrx">0</span></p>
+<script>
+// 1. PENTING: GANTI INI DENGAN PUNYA KAMU DARI FIREBASE CONSOLE
+var firebaseConfig = {
+  apiKey: "GANTI_APIKEY_KAMU",
+  authDomain: "GANTI_AUTH_DOMAIN",
+  databaseURL: "GANTI_DATABASE_URL",
+  projectId: "GANTI_PROJECT_ID"
+};
+firebase.initializeApp(firebaseConfig);
+var db = firebase.database();
+var auth = firebase.auth();
+var userId = "";
 
-    <div class="filter-box">
-      <b>Filter Laporan</b>
-      <input type="date" id="filterHarian">
-      <button class="biru" onclick="filterHarian()">TAMPILKAN HARIAN</button>
-      <input type="month" id="filterBulanan">
-      <button class="ungu" onclick="filterBulanan()">TAMPILKAN BULAN</button>
-      <button class="kuning" onclick="resetFilter()">RESET FILTER</button>
-      <div id="hasilFilter" style="margin-top:10px; font-weight:bold; color:green;"></div>
+var produk = [];
+var keranjang = [];
+
+function login(){
+  auth.signInWithEmailAndPassword(email.value, password.value)
+.then(user => {
+    userId = user.user.uid;
+    document.getElementById('loginBox').style.display='none';
+    document.getElementById('app').style.display='block';
+    document.getElementById('userEmail').innerText = user.user.email;
+    loadData();
+  })
+.catch(error => { err.innerText = error.message; });
+}
+function logout(){ auth.signOut(); location.reload(); }
+
+function loadData(){
+  db.ref('kasir/' + userId + '/produk').on('value', snap => {
+    produk = snap.val() || [];
+    tampilProduk();
+  });
+  db.ref('kasir/' + userId + '/keranjang').on('value', snap => {
+    keranjang = snap.val() || [];
+    tampilKeranjang();
+  });
+  db.ref('kasir/' + userId + '/riwayat').on('value', snap => {
+    let riwayat = snap.val() || [];
+    let html = '';
+    Object.values(riwayat).reverse().forEach(r => {
+      html += `<tr><td>${r.tanggal}</td><td>Rp ${r.total.toLocaleString('id-ID')}</td><td>${r.item} item</td></tr>`;
+    });
+    document.querySelector('#tabelRiwayat tbody').innerHTML = html;
+  });
+}
+
+function tambahProduk(){
+  if(!namaBarang.value ||!hargaBarang.value) return alert('Isi semua!');
+  produk.push({nama: namaBarang.value, harga: Number(hargaBarang.value)});
+  db.ref('kasir/' + userId + '/produk').set(produk);
+  namaBarang.value=''; hargaBarang.value='';
+  alert('Produk tersimpan!');
+}
+
+function tampilProduk(){
+  let cari = document.getElementById('cari').value.toLowerCase();
+  let html = '';
+  produk.filter(p=>p.nama.toLowerCase().includes(cari)).forEach((p,i)=>{
+    html += `<div class="produk" onclick="addKeranjang(${i})"><span>${p.nama}</span><span>Rp ${p.harga.toLocaleString('id-ID')}</span></div>`;
+  });
+  listProduk.innerHTML = html;
+}
+
+function addKeranjang(i){
+  let item = produk[i];
+  let exist = keranjang.find(k=>k.nama==item.nama);
+  if(exist){ exist.qty++; } else { keranjang.push({...item, qty:1}); }
+  db.ref('kasir/' + userId + '/keranjang').set(keranjang);
+}
+
+function tampilKeranjang(){
+  let html=''; let total=0;
+  keranjang.forEach((k,i)=>{
+    total += k.harga * k.qty;
+    html += `<div class="keranjang-item"><span>${k.nama} x${k.qty}</span><span>Rp ${(k.harga*k.qty).toLocaleString('id-ID')} <button onclick="hapusItem(${i})">X</button></span></div>`;
+  });
+  listKeranjang.innerHTML = html;
+  document.getElementById('total').innerText = total.toLocaleString('id-ID');
+}
+
+function hapusItem(i){ keranjang.splice(i,1); db.ref('kasir/' + userId + '/keranjang').set(keranjang); }
+function kosongkan(){ keranjang=[]; db.ref('kasir/' + userId + '/keranjang').set(keranjang); }
+
+function bayar(){
+  if(keranjang.length==0) return alert('Keranjang kosong!');
+  let total = keranjang.reduce((a,b)=>a+(b.harga*b.qty),0);
+  let transaksi = {
+    tanggal: new Date().toLocaleString('id-ID'),
+    total: total,
+    item: keranjang.length,
+    detail: keranjang
+  };
+  db.ref('kasir/' + userId + '/riwayat').push(transaksi);
+  kosongkan();
+  alert('Transaksi tersimpan!');
+}
+</script>
+</body>
+</html>      <div id="hasilFilter" style="margin-top:10px; font-weight:bold; color:green;"></div>
     </div>
 
     <button class="merah" onclick="resetLaporan()">RESET LAPORAN</button>
