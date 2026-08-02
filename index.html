@@ -3,11 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WARUNG IRWAN MARINIR - KASIR PRO V6.9.9.3 FIREBASE</title>
+<title>WARUNG IRWAN MARINIR - KASIR PRO V6.9.9.4 TEST</title>
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <style>
 :root{--bg:#f5f5f5; --box:#fff; --text:#000; --primary:#1565c0; --border:#ddd;}
 body.dark{--bg:#121212; --box:#1e1e1e; --text:#e0e0e0; --primary:#42a5f5; --border:#333;}
@@ -39,32 +36,17 @@ button.hijau{background:#2e7d32} button.merah{background:#c62828} button.kuning{
 canvas{background:var(--box); border-radius:8px; padding:10px; width:100%}
 #reader-kasir, #reader-barang{width:100%; border-radius:10px; overflow:hidden; margin-top:10px; min-height:250px; background:#000; position:relative; z-index:999}
 .filter-box{padding:10px; background:var(--bg); border-radius:8px; margin:10px 0}
-#halamanLogin{position:fixed; top:0; left:0; width:100%; height:100%; background:var(--primary); display:flex; justify-content:center; align-items:center; z-index:9999}
-.loginBox{background:var(--box); padding:30px; border-radius:15px; width:90%; max-width:400px; box-shadow:0 5px 20px rgba(0,0,0,0.3)}
-.loginBox h2{text-align:center; margin-bottom:20px; color:var(--primary)}
-.loading{font-size:12px; color:green; text-align:center}
 </style>
 </head>
 <body>
 
-<div id="halamanLogin">
-  <div class="loginBox">
-    <h2>🔒 LOGIN KASIR</h2>
-    <input id="userLogin" type="email" placeholder="Email Firebase">
-    <input id="passLogin" type="password" placeholder="Password Firebase">
-    <button class="hijau" onclick="cekLogin()">MASUK</button>
-    <p class="loading" id="loadingText"></p>
-  </div>
-</div>
-
-<div id="appUtama" class="hidden">
+<div id="appUtama">
 <div class="header">
   <div class="running-text">
-    <span id="namaWarungHeader">WARUNG IRWAN MARINIR - SELAMAT DATANG</span>
+    <span id="namaWarungHeader">WARUNG IRWAN MARINIR - MODE TEST TANPA LOGIN</span>
   </div>
 </div>
 <div class="btn-header">
-  <button onclick="logout()" style="width:auto; padding:8px 12px; background:#c62828">🚪</button>
   <button onclick="toggleTema()" style="width:auto; padding:8px 12px">🌙</button>
 </div>
 
@@ -77,6 +59,7 @@ canvas{background:var(--box); border-radius:8px; padding:10px; width:100%}
     <button class="merah" onclick="show('setting')">SETTING</button>
   </div>
   <div id="kasir" class="box">
+    <h3 style="color:red; text-align:center">MODE TEST - DATA TIDAK TERSIMPAN</h3>
     <button class="ungu" onclick="toggleScanner('kasir')">📷 SCAN BARCODE</button>
     <div id="reader-kasir" class="hidden"><button class="merah" onclick="stopScanner()" style="position:absolute; top:10px; right:10px; width:auto; z-index:1000">TUTUP KAMERA</button></div>
     <input id="cari" type="text" placeholder="🔍 Cari nama barang..." onkeyup="tampilKasir()">
@@ -125,70 +108,17 @@ canvas{background:var(--box); border-radius:8px; padding:10px; width:100%}
     <input id="inputBatasStok" type="number" placeholder="Contoh: 5">
     <small>Jika stok <= angka ini maka status TIPIS KUNING</small>
     <button onclick="simpanSetting()">SIMPAN PENGATURAN</button>
-    <hr><button onclick="backupData()">BACKUP DATA KE CLIPBOARD</button>
-    <button onclick="restoreData()">RESTORE DATA</button>
-    <hr><button class="merah" onclick="resetSemua()">RESET SEMUA DATA</button>
   </div>
 </div>
 </div>
 
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyCHwvOsZ8AjQpc64yHTxMxebRsqp88yx1Q",
-  authDomain: "kasir-sembako-8972f.firebaseapp.com",
-  databaseURL: "https://kasir-sembako-8972f-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "kasir-sembako-8972f",
-  storageBucket: "kasir-sembako-8972f.firebasestorage.app",
-  messagingSenderId: "669992382893",
-  appId: "1:669992382893:web:53cf405273cf45723b3124"
-};
-firebase.initializeApp(firebaseConfig);
-const database = firebase.database();
-const auth = firebase.auth();
-
-var db = {barang:[], laporan:[], nama:"WARUNG IRWAN MARINIR", tema:"terang", batasStok:5};
+var db = {barang:[{id:1,kode:"123",nama:"AQUA 600ML",harga:3000,stok:10}], laporan:[], nama:"WARUNG IRWAN MARINIR", tema:"terang", batasStok:5};
 var keranjang = []; var editId = null; var html5QrCode = null; var scannerAktif = null; var isScanning = false; var strukTerakhir = "";
 
-function cekLogin(){
-  let u = document.getElementById('userLogin').value;
-  let p = document.getElementById('passLogin').value;
-  document.getElementById('loadingText').innerText = 'Loading data...';
-  auth.signInWithEmailAndPassword(u, p).catch((error) => { alert('Login Gagal: ' + error.message); document.getElementById('loadingText').innerText = ''; });
-}
-function logout(){auth.signOut(); location.reload();}
-auth.onAuthStateChanged((user) => {
-  if (user) {
-    document.getElementById('halamanLogin').style.display = 'none';
-    document.getElementById('appUtama').style.display = 'block';
-    loadData();
-  } else {
-    document.getElementById('halamanLogin').style.display = 'flex';
-    document.getElementById('appUtama').style.display = 'none';
-  }
-});
-
-function loadData(){
-  database.ref('data').on('value', (snapshot) => {
-    try{
-      const data = snapshot.val();
-      if(data){
-        db = data;
-        // PAKSA JADI ARRAY BIAR GAK ERROR
-        if(!Array.isArray(db.barang)) db.barang = [];
-        if(!Array.isArray(db.laporan)) db.laporan = [];
-      } else {
-        save();
-      }
-      if(db.tema=='gelap') document.body.classList.add('dark'); else document.body.classList.remove('dark');
-      document.getElementById('loadingText').innerText = '';
-      setTimeout(()=>{ show('kasir'); }, 500); // KASIH JEDA LEBIH LAMA
-    }catch(e){
-      alert('Error Load Data: ' + e.message);
-      document.getElementById('loadingText').innerText = 'Error, refresh halaman';
-    }
-  });
-}
-function save(){ database.ref('data').set(db); }
+function loadData(){show('kasir');}
+function save(){localStorage.setItem('db_kasir', JSON.stringify(db));}
+function loadLocal(){let d=localStorage.getItem('db_kasir'); if(d) db=JSON.parse(d);}
 
 async function stopScanner(){if(html5QrCode && isScanning){isScanning=false;try{await html5QrCode.stop();}catch(e){}html5QrCode.clear();html5QrCode=null;}document.querySelectorAll('[id^=reader]').forEach(r=>r.classList.add('hidden'));scannerAktif=null;}
 function toggleTema(){document.body.classList.toggle('dark');db.tema=document.body.classList.contains('dark')?'gelap':'terang';save();}
@@ -200,7 +130,7 @@ function show(id){
   document.getElementById('grafik').classList.add('hidden');
   document.getElementById('setting').classList.add('hidden');
   document.getElementById(id).classList.remove('hidden');
-  document.getElementById('namaWarungHeader').innerText=(db.nama||'WARUNG').toUpperCase() + " - SELAMAT DATANG";
+  document.getElementById('namaWarungHeader').innerText=(db.nama||'WARUNG').toUpperCase() + " - MODE TEST";
   document.getElementById('inputNamaWarung').value=db.nama;
   document.getElementById('inputBatasStok').value=db.batasStok;
   if(id=='kasir')tampilKasir();
@@ -208,7 +138,7 @@ function show(id){
   if(id=='laporan')tampilLaporan();
   if(id=='grafik')gambarGrafik();
 }
-function simpanBarang(){let k=document.getElementById('kode').value;let n=document.getElementById('nama').value;let h=parseInt(document.getElementById('harga').value);let s=parseInt(document.getElementById('stok').value);if(!n||!h||s<0)return alert('Isi lengkap!');if(editId){let b=db.barang.find(x=>x.id==editId);b.kode=k;b.nama=n;b.harga=h;b.stok=s;editId=null;}else{db.barang.push({id:Date.now(),kode:k,nama:n,harga:h,stok:s});}save();document.getElementById('kode').value='';document.getElementById('nama').value='';document.getElementById('harga').value='';document.getElementById('stok').value='';tampilBarang();alert('Tersimpan ke Cloud!');}
+function simpanBarang(){let k=document.getElementById('kode').value;let n=document.getElementById('nama').value;let h=parseInt(document.getElementById('harga').value);let s=parseInt(document.getElementById('stok').value);if(!n||!h||s<0)return alert('Isi lengkap!');if(editId){let b=db.barang.find(x=>x.id==editId);b.kode=k;b.nama=n;b.harga=h;b.stok=s;editId=null;}else{db.barang.push({id:Date.now(),kode:k,nama:n,harga:h,stok:s});}save();document.getElementById('kode').value='';document.getElementById('nama').value='';document.getElementById('harga').value='';document.getElementById('stok').value='';tampilBarang();alert('Tersimpan di HP!');}
 function tampilBarang(){let html='';(db.barang||[]).forEach(b=>{let stokBadge;if(b.stok<=0){stokBadge='<span class="badge">HABIS</span>';}else if(b.stok<=db.batasStok){stokBadge='<span class="badge kuning">TIPIS</span>';}else{stokBadge='<span class="badge hijau">AMAN</span>';}html+=`<div class="item"><div class="info"><b>${b.nama}</b> ${stokBadge}<br><small>Kode:${b.kode||'-'} | Stok: ${b.stok} | Rp${b.harga.toLocaleString()}</small></div><div class="btn-group"><button class="kuning" onclick="editBarang(${b.id})">Edit</button><button class="merah" onclick="hapusBarang(${b.id})">Hapus</button></div></div>`;});document.getElementById('listBarang').innerHTML=html||'Belum ada barang';}
 function editBarang(id){let b=db.barang.find(x=>x.id==id);document.getElementById('kode').value=b.kode||'';document.getElementById('nama').value=b.nama;document.getElementById('harga').value=b.harga;document.getElementById('stok').value=b.stok;editId=id;show('barang');}
 function hapusBarang(id){if(confirm('Hapus barang ini?')){db.barang=db.barang.filter(b=>b.id!=id);save();tampilBarang();}}
@@ -217,7 +147,7 @@ function add(id){let b=db.barang.find(x=>x.id==id);if(b.stok<=0)return alert('St
 function tampilKeranjang(){if(keranjang.length==0){document.getElementById('keranjang').innerHTML='Kosong';document.getElementById('total').innerText='0';return;}let total=0;let html='';keranjang.forEach((k,i)=>{let sub=k.harga*k.qty;total+=sub;html+=`<div class="keranjang-item"><span>${k.nama} x${k.qty}</span><span>Rp${sub.toLocaleString()} <button style="width:auto;padding:2px 8px;background:red" onclick="hapusKeranjang(${i})">X</button></span></div>`;});document.getElementById('keranjang').innerHTML=html;document.getElementById('total').innerText=total.toLocaleString();hitungKembali();}
 function hapusKeranjang(i){keranjang.splice(i,1);tampilKeranjang();}
 function hitungKembali(){let total=parseInt(document.getElementById('total').innerText.replace(/\./g,''))||0;let bayar=parseInt(document.getElementById('bayar').value)||0;document.getElementById('kembali').innerText=(bayar-total).toLocaleString();}
-function bayar(){let total=parseInt(document.getElementById('total').innerText.replace(/\./g,''))||0;let bayar=parseInt(document.getElementById('bayar').value)||0;if(total==0)return alert('Keranjang kosong');if(bayar<total)return alert('Uang kurang!');keranjang.forEach(k=>{let b=db.barang.find(x=>x.id==k.id);b.stok-=k.qty;});let trx={waktu:new Date().toLocaleString('id-ID'),total:total,bayar:bayar,kembali:bayar-total,detail:[...keranjang]};db.laporan.push(trx);save();buatStruk(trx);cetakBluetooth(strukTerakhir);alert('TRANSAKSI SUKSES & TERSIMPAN DI CLOUD!');batal();}
+function bayar(){let total=parseInt(document.getElementById('total').innerText.replace(/\./g,''))||0;let bayar=parseInt(document.getElementById('bayar').value)||0;if(total==0)return alert('Keranjang kosong');if(bayar<total)return alert('Uang kurang!');keranjang.forEach(k=>{let b=db.barang.find(x=>x.id==k.id);b.stok-=k.qty;});let trx={waktu:new Date().toLocaleString('id-ID'),total:total,bayar:bayar,kembali:bayar-total,detail:[...keranjang]};db.laporan.push(trx);save();buatStruk(trx);cetakBluetooth(strukTerakhir);alert('TRANSAKSI SUKSES!');batal();}
 function buatStruk(trx){let tgl=trx.waktu;let struk=`${db.nama}\n============================\n${tgl}\n============================\n`;trx.detail.forEach(d=>{let nama = d.nama.length > 20? d.nama.substring(0,20) : d.nama;struk+=`${nama}\n ${d.qty} x ${d.harga.toLocaleString()} = ${ (d.qty*d.harga).toLocaleString() }\n`});struk+=`============================\nTOTAL : Rp${trx.total.toLocaleString()}\nBAYAR : Rp${trx.bayar.toLocaleString()}\nKEMBALI : Rp${trx.kembali.toLocaleString()}\n============================\nTERIMA KASIH\n`;strukTerakhir = struk;document.getElementById('struk').innerText=struk;document.getElementById('struk').classList.remove('hidden');navigator.clipboard.writeText(struk);}
 async function cetakBluetooth(teks){if(!navigator.bluetooth){ alert('Browser tidak support Bluetooth. Pakai Chrome Android'); return; }try {alert('Mencari Printer Bluetooth...');const device = await navigator.bluetooth.requestDevice({acceptAllDevices: true,optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']});const server = await device.gatt.connect();const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');const characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');const encoder = new TextEncoder();const data = encoder.encode(teks);await characteristic.writeValue(data);alert('Struk terkirim ke printer: ' + device.name);} catch(error) {alert('Gagal print: ' + error.message + '\n\nPastikan Bluetooth nyala & printer sudah di-pair');}}
 function printUlang(){if(strukTerakhir=="") return alert("Belum ada transaksi");cetakBluetooth(strukTerakhir);}
@@ -230,11 +160,8 @@ function filterBulanan(){let bln = document.getElementById('filterBulanan').valu
 function gambarGrafik(){const ctx=document.getElementById('chart').getContext('2d');const width=ctx.canvas.width=ctx.canvas.parentElement.clientWidth;ctx.clearRect(0,0,width,250);let data7hari=[]; let labels=[];for(let i=6;i>=0;i--){let tgl=new Date(); tgl.setDate(tgl.getDate()-i);let total=(db.laporan||[]).filter(l=>{let dt=parseTanggal(l.waktu); return dt.toDateString()==tgl.toDateString();}).reduce((sum,l)=>sum+l.total,0);data7hari.push(total); labels.push(tgl.toLocaleDateString('id-ID',{weekday:'short'}));}const warna = ['#e65100', '#1565c0', '#2e7d32', '#6a1b9a', '#f9a825', '#c62828', '#0277bd'];let max=Math.max(...data7hari,10000); let barWidth=(width-20)/7-10;data7hari.forEach((val,i)=>{let h=max>0?(val/max)*200:0; let x = i*(barWidth+10)+10;ctx.fillStyle=warna[i]; ctx.fillRect(x,230-h,barWidth,h);ctx.fillStyle='var(--text)'; ctx.font='bold 12px Arial'; ctx.textAlign='center'; ctx.fillText(labels[i], x+barWidth/2, 245);ctx.font='11px Arial'; ctx.fillText('Rp'+(val/1000)+'k', x+barWidth/2, 225-h);});}
 async function toggleScanner(tempat){if(scannerAktif==tempat){await stopScanner();return;}await stopScanner();const readerDiv=document.getElementById('reader-'+tempat);readerDiv.classList.remove('hidden');scannerAktif=tempat;isScanning=true;html5QrCode=new Html5Qrcode("reader-"+tempat);html5QrCode.start({facingMode:"environment"},{fps:10,qrbox:250},async(decodedText)=>{if(!isScanning)return;await stopScanner();if(tempat=='barang'){document.getElementById('kode').value=decodedText;alert('Kode: '+decodedText+' sudah terisi.');}if(tempat=='kasir'){let b=db.barang.find(x=>x.kode==decodedText);if(b){add(b.id);}else{alert('Barang dengan kode '+decodedText+' tidak ditemukan!');}}},(errorMessage)=>{}).catch(err=>{alert('Gagal buka kamera: '+err+'\n\nCoba buka di Chrome dan izinkan kamera');stopScanner();});}
 function resetLaporan(){if(confirm('Reset laporan?')){db.laporan=[];save();tampilLaporan();}}
-function simpanSetting(){db.nama=document.getElementById('inputNamaWarung').value||"WARUNG IRWAN MARINIR";db.batasStok=parseInt(document.getElementById('inputBatasStok').value)||5;save();show('kasir');alert('Pengaturan Tersimpan ke Cloud!');}
-function backupData(){navigator.clipboard.writeText(JSON.stringify(db));alert('Data sudah di-copy!');}
-function restoreData(){let data=prompt('Paste data backup:');if(data){try{db=JSON.parse(data);save();alert('Restore berhasil!');show('kasir');}catch(e){alert('Data rusak!')}}
-}
-function resetSemua(){if(confirm('YAKIN HAPUS SEMUA?')){db={barang:[],laporan:[],nama:db.nama,tema:db.tema,batasStok:5};save();show('kasir');alert('Data direset');}}
+function simpanSetting(){db.nama=document.getElementById('inputNamaWarung').value||"WARUNG IRWAN MARINIR";db.batasStok=parseInt(document.getElementById('inputBatasStok').value)||5;save();show('kasir');alert('Pengaturan Tersimpan!');}
+loadLocal(); show('kasir');
 </script>
 </body>
-</html>
+  </html>
