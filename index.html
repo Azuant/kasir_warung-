@@ -234,6 +234,10 @@ function restoreData(){let data=prompt('Paste data backup:');if(data){try{db=JSO
 }
 function resetSemua(){if(confirm('YAKIN HAPUS SEMUA?')){db={barang:[],laporan:[],nama:db.nama,tema:db.tema,batasStok:5};saveToFirebase();show('kasir');alert('Data direset');}}
 function initApp(){if(db.tema=='gelap') document.body.classList.add('dark'); show('kasir');}
+initApp(); // <-- INI WAJIB ADA
+</script>
+</body>
+</html>
 </script>
 </body>
 </html>
