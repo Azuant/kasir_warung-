@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WARUNG IRWAN MARINIR - KASIR PRO FIREBASE V7</title>
+<title>WARUNG IRWAN MARINIR - KASIR PRO FIREBASE V8</title>
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-<!-- TAMBAHAN FIREBASE -->
+<!-- FIREBASE -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
@@ -79,36 +79,70 @@ button.hijau{background:#2e7d32} button.merah{background:#c62828} button.kuning{
     <button class="merah" onclick="show('setting')">SETTING</button>
   </div>
   
-  <!-- KODE KASIR, BARANG, LAPORAN, GRAFIK, SETTING KAMU TETAP SAMA -->
-  <!-- CUMA FUNGSI SAVE NYA YANG KITA UBAH -->
-  <div id="kasir" class="box"> ... isi sama seperti punyamu ... </div>
-  <div id="barang" class="box hidden"> ... isi sama seperti punyamu ... </div>
-  <div id="laporan" class="box hidden"> ... isi sama seperti punyamu ... </div>
-  <div id="grafik" class="box hidden"> ... isi sama seperti punyamu ... </div>
-  <div id="setting" class="box hidden"> ... isi sama seperti punyamu ... </div>
+  <div id="kasir" class="box">
+    <h3>KASIR</h3>
+    <input id="cari" onkeyup="cariBarang()" placeholder="Cari Nama/Kode/Scan QR">
+    <div id="hasilCari" class="list"></div>
+    <h4>KERANJANG</h4>
+    <div id="keranjang" class="list"></div>
+    <div class="total">TOTAL: Rp<span id="total">0</span></div>
+    <input id="bayar" type="number" placeholder="Uang Bayar" onkeyup="hitungKembali()">
+    <div class="total">KEMBALI: Rp<span id="kembali">0</span></div>
+    <button class="hijau" onclick="bayar()">BAYAR & CETAK STRUK</button>
+    <div id="struk"></div>
+  </div>
+
+  <div id="barang" class="box hidden">
+    <h3>DATA BARANG</h3>
+    <input id="kode" placeholder="Kode Barang">
+    <input id="nama" placeholder="Nama Barang">
+    <input id="harga" type="number" placeholder="Harga Jual">
+    <input id="stok" type="number" placeholder="Stok">
+    <button class="hijau" onclick="simpanBarang()">SIMPAN BARANG</button>
+    <button class="kuning" onclick="resetForm()">BATAL EDIT</button>
+    <div id="daftarBarang" class="list"></div>
+  </div>
+
+  <div id="laporan" class="box hidden">
+    <h3>LAPORAN PENJUALAN</h3>
+    <div id="daftarLaporan"></div>
+    <button class="merah" onclick="resetSemua()">RESET SEMUA DATA</button>
+  </div>
+
+  <div id="grafik" class="box hidden">
+    <h3>GRAFIK 7 HARI TERAKHIR</h3>
+    <canvas id="grafikCanvas" height="200"></canvas>
+  </div>
+
+  <div id="setting" class="box hidden">
+    <h3>SETTING</h3>
+    <input id="namaWarung" placeholder="Nama Warung">
+    <input id="batasStok" type="number" placeholder="Batas Notifikasi Stok Habis">
+    <button class="hijau" onclick="simpanSetting()">SIMPAN SETTING</button>
+  </div>
 </div>
 </div>
 
 <script>
-// 1. PASTE CONFIG FIREBASE KAMU DI SINI
+// 1. CONFIG FIREBASE KAMU
 const firebaseConfig = {
-  apiKey: "PASTE_API_KEY_KAMU",
-  authDomain: "PASTE_AUTH_DOMAIN",
-  databaseURL: "PASTE_DATABASE_URL",
-  projectId: "PASTE_PROJECT_ID",
-  storageBucket: "PASTE_STORAGE",
-  messagingSenderId: "PASTE_SENDER_ID",
-  appId: "PASTE_APP_ID"
+  apiKey: "AIzaSyCHwvOsZ8AjQpc64yHTxMxebRsqp88yx1Q",
+  authDomain: "kasir-sembako-8972f.firebaseapp.com",
+  databaseURL: "https://kasir-sembako-8972f-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "kasir-sembako-8972f",
+  storageBucket: "kasir-sembako-8972f.firebasestorage.app",
+  messagingSenderId: "669992382893",
+  appId: "1:669992382893:web:53cf405273cf45723b3124"
 };
 
-// 2. INIT FIREBASE
+// 2. INIT
 firebase.initializeApp(firebaseConfig);
 const dbRef = firebase.database();
 
 let db = {barang:[], laporan:[], nama:"WARUNG IRWAN MARINIR", tema:"terang", batasStok:5};
 let keranjang = []; let editId = null;
 
-// CEK LOGIN
+// 3. CEK LOGIN
 firebase.auth().onAuthStateChanged(user => {
   if(user){
     document.getElementById('halamanLogin').style.display = 'none';
@@ -116,7 +150,9 @@ firebase.auth().onAuthStateChanged(user => {
     document.getElementById('statusKoneksi').className = 'status online';
     document.getElementById('statusKoneksi').innerText = 'ONLINE - Data Sinkron';
     loadDataDariFirebase();
-    initApp();
+  } else {
+    document.getElementById('halamanLogin').style.display = 'flex';
+    document.getElementById('appUtama').classList.add('hidden');
   }
 });
 
@@ -128,38 +164,113 @@ function loginFirebase(){
 function daftarFirebase(){
   let email = document.getElementById('emailLogin').value;
   let pass = document.getElementById('passLogin').value;
-  firebase.auth().createUserWithEmailAndPassword(email, pass).then(()=>alert('Akun Dibuat!')).catch(e=>alert('Gagal: '+e.message));
+  firebase.auth().createUserWithEmailAndPassword(email, pass).then(()=>alert('Akun Dibuat! Silakan Login')).catch(e=>alert('Gagal: '+e.message));
 }
-function logout(){firebase.auth().signOut(); location.reload();}
+function logout(){firebase.auth().signOut();}
 
-// 3. LOAD DATA DARI FIREBASE
+// 4. LOAD & SAVE KE FIREBASE
 function loadDataDariFirebase(){
   dbRef.ref('dataKasir').on('value', snap => {
     if(snap.val()) db = snap.val();
-    tampilBarang(); tampilKasir(); tampilLaporan();
+    tampilBarang(); tampilKasir(); tampilLaporan(); tampilSetting();
   });
 }
-
-// 4. FUNGSI SAVE UDAH GANTI KE FIREBASE
 function save(){
   dbRef.ref('dataKasir').set(db);
 }
 
-// SEMUA FUNGSI KAMU YANG LAIN TETAP SAMA
-// copy semua fungsi: show, simpanBarang, tampilBarang, add, bayar, dll dari kode "aplikasi awal" kamu ke bawah sini
-// yang penting di setiap akhir fungsi yang ngerubah data, panggil save()
+// 5. FUNGSI UTAMA
+function show(id){
+  document.querySelectorAll('.box').forEach(b=>b.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+function toggleTema(){
+  db.tema = db.tema == 'terang' ? 'gelap' : 'terang';
+  document.body.className = db.tema == 'gelap' ? 'dark' : '';
+  save();
+}
 
 function simpanBarang(){
   let k=document.getElementById('kode').value;let n=document.getElementById('nama').value;let h=parseInt(document.getElementById('harga').value);let s=parseInt(document.getElementById('stok').value);
   if(!n||!h||s<0)return alert('Isi lengkap!');
   if(editId){let b=db.barang.find(x=>x.id==editId);b.kode=k;b.nama=n;b.harga=h;b.stok=s;editId=null;}
   else{db.barang.push({id:Date.now(),kode:k,nama:n,harga:h,stok:s});}
-  save(); // <-- INI KUNCINYA, KIRIM KE FIREBASE
-  // ... kosongkan form ...
-  alert('Tersimpan ke Firebase!');
+  save(); resetForm(); alert('Tersimpan ke Firebase!');
+}
+function resetForm(){document.getElementById('kode').value='';document.getElementById('nama').value='';document.getElementById('harga').value='';document.getElementById('stok').value='';editId=null;}
+function tampilBarang(){
+  let html=''; db.barang.forEach(b=>{
+    let badge = b.stok==0?'<span class="badge">HABIS</span>':b.stok<=db.batasStok?'<span class="badge kuning">TIPIS</span>':'';
+    html+=`<div class="item"><div><b>${b.nama}</b> ${badge}<br>Rp${b.harga.toLocaleString()} | Stok:${b.stok}</div><div class="btn-group"><button onclick="editBarang(${b.id})">Edit</button><button class="merah" onclick="hapusBarang(${b.id})">Hapus</button></div></div>`
+  });
+  document.getElementById('daftarBarang').innerHTML=html;
+}
+function editBarang(id){let b=db.barang.find(x=>x.id==id);document.getElementById('kode').value=b.kode;document.getElementById('nama').value=b.nama;document.getElementById('harga').value=b.harga;document.getElementById('stok').value=b.stok;editId=id;show('barang');}
+function hapusBarang(id){if(confirm('Hapus?')){db.barang=db.barang.filter(x=>x.id!=id);save();}}
+
+function cariBarang(){
+  let q=document.getElementById('cari').value.toLowerCase();
+  let html=''; db.barang.filter(b=>b.nama.toLowerCase().includes(q)||b.kode.includes(q)).forEach(b=>{
+    if(b.stok>0) html+=`<div class="item"><div>${b.nama} - Rp${b.harga.toLocaleString()} - Stok:${b.stok}</div><button onclick="add(${b.id})">+</button></div>`
+  });
+  document.getElementById('hasilCari').innerHTML=html;
+}
+function add(id){let b=db.barang.find(x=>x.id==id);let k=keranjang.find(x=>x.id==id);if(k)k.qty++;else keranjang.push({id:id,nama:b.nama,harga:b.harga,qty:1});tampilKasir();}
+function tampilKasir(){
+  let html='';let total=0;
+  keranjang.forEach(k=>{
+    total+=k.harga*k.qty;
+    html+=`<div class="keranjang-item"><span>${k.nama} x${k.qty}</span><span>Rp${(k.harga*k.qty).toLocaleString()} <button onclick="kurang(${k.id})">-</button></span></div>`
+  });
+  document.getElementById('keranjang').innerHTML=html;
+  document.getElementById('total').innerText=total.toLocaleString();
+}
+function kurang(id){let k=keranjang.find(x=>x.id==id);k.qty--;if(k.qty<=0)keranjang=keranjang.filter(x=>x.id!=id);tampilKasir();}
+function hitungKembali(){let bayar=parseInt(document.getElementById('bayar').value)||0;let total=parseInt(document.getElementById('total').innerText.replace(/,/g,''));document.getElementById('kembali').innerText=(bayar-total).toLocaleString();}
+function bayar(){
+  let total=parseInt(document.getElementById('total').innerText.replace(/,/g,''));
+  if(total==0)return alert('Keranjang kosong!');
+  let bayar=parseInt(document.getElementById('bayar').value);
+  if(bayar<total)return alert('Uang kurang!');
+  
+  keranjang.forEach(k=>{
+    let b=db.barang.find(x=>x.id==k.id);b.stok-=k.qty;
+  });
+  
+  db.laporan.push({tanggal:new Date().toLocaleString(), item:keranjang, total:total});
+  save();
+  
+  let struk=`==== ${db.nama} ====\n${new Date().toLocaleString()}\n--------------------\n`;
+  keranjang.forEach(k=>struk+=`${k.nama} x${k.qty} = Rp${(k.harga*k.qty).toLocaleString()}\n`);
+  struk+=`--------------------\nTOTAL: Rp${total.toLocaleString()}\nBAYAR: Rp${bayar.toLocaleString()}\nKEMBALI: Rp${(bayar-total).toLocaleString()}\n==== TERIMA KASIH ====`;
+  document.getElementById('struk').innerText=struk;
+  
+  keranjang=[];document.getElementById('bayar').value='';tampilKasir();
 }
 
-// ...lanjutkan copy semua fungsi kamu dari `tampilBarang()` sampai `resetSemua()` ...
+function tampilLaporan(){
+  let html=''; db.laporan.slice().reverse().forEach(l=>{
+    html+=`<div class="item"><div><b>${l.tanggal}</b><br>Total: Rp${l.total.toLocaleString()}</div></div>`
+  });
+  document.getElementById('daftarLaporan').innerHTML=html;
+}
+function resetSemua(){if(confirm('Yakin reset semua?')){db={barang:[], laporan:[], nama:db.nama, tema:db.tema, batasStok:db.batasStok};save();}}
+
+function tampilSetting(){
+  document.getElementById('namaWarung').value=db.nama;
+  document.getElementById('batasStok').value=db.batasStok;
+  document.getElementById('namaWarungHeader').innerText=db.nama + ' - ONLINE';
+  document.body.className = db.tema == 'gelap' ? 'dark' : '';
+}
+function simpanSetting(){
+  db.nama=document.getElementById('namaWarung').value;
+  db.batasStok=parseInt(document.getElementById('batasStok').value);
+  save(); alert('Setting Tersimpan!');
+}
+
+function initApp(){
+  if(db.tema=='gelap') document.body.className='dark';
+}
 </script>
 </body>
 </html>
