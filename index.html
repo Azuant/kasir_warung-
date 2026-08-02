@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WARUNG IRWAN MARINIR - KASIR PRO V6.9.9.3</title>
+<title>WARUNG IRWAN MARINIR - KASIR PRO V6.9.7</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -13,18 +13,16 @@
 body.dark{--bg:#121212; --box:#1e1e1e; --text:#e0e0e0; --primary:#42a5f5; --border:#333;}
 *{box-sizing:border-box}
 body{font-family:'Segoe UI',Arial; margin:0; background:var(--bg); color:var(--text)}
-.header{background:var(--primary); color:white; padding:0; text-align:left; font-size:18px; font-weight:bold; position:sticky; top:0; z-index:10; height:50px; overflow:hidden}
-.running-text{width:calc(100% - 110px); white-space:nowrap; overflow:hidden; line-height:50px}
-.running-text span{display:inline-block; padding-left:100%; animation:jalan 10s linear infinite; font-size:20px; letter-spacing:2px}
-@keyframes jalan{0%{transform:translateX(0)} 100%{transform:translateX(-100%)}}
-.btn-header{position:absolute; top:8px; right:10px; z-index:11; display:flex; gap:5px}
+.header{background:var(--primary); color:white; padding:0 15px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:10; height:50px}
+.header-left{font-size:18px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.header-right{display:flex; gap:10px; align-items:center}
 .wrap{padding:10px; max-width:1200px; margin:auto}
 .box{background:var(--box); border-radius:10px; padding:15px; margin-bottom:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1); border:1px solid var(--border)}
-input,button{width:100%; padding:12px; margin:5px 0; border-radius:8px; border:1px solid var(--border); font-size:16px; background:var(--box); color:var(--text)}
+input,button,textarea{width:100%; padding:12px; margin:5px 0; border-radius:8px; border:1px solid var(--border); font-size:16px; background:var(--box); color:var(--text)}
 button{background:var(--primary); color:white; border:none; font-weight:bold; cursor:pointer}
 button:hover{opacity:0.85}
 button.hijau{background:#2e7d32} button.merah{background:#c62828} button.kuning{background:#f9a825; color:#000} button.ungu{background:#6a1b9a} button.biru{background:#0277bd} button.orange{background:#e65100} button.abu{background:#555}
-.menu{display:grid; grid-template-columns:repeat(5, 1fr); gap:8px}
+.menu{display:grid; grid-template-columns:repeat(4, 1fr); gap:8px}
 .list{max-height:400px; overflow-y:auto; border:1px solid var(--border); border-radius:8px}
 .item{display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid var(--border); gap:10px}
 .btn-group{display:flex; gap:8px}
@@ -40,6 +38,8 @@ canvas{background:var(--box); border-radius:8px; padding:10px; width:100%}
 #reader-kasir, #reader-barang{width:100%; border-radius:10px; overflow:hidden; margin-top:10px; min-height:250px; background:#000}
 .filter-box{padding:10px; background:var(--bg); border-radius:8px; margin:10px 0}
 #loginBox{max-width:400px; margin:50px auto}
+textarea{height:120px; font-family:monospace; font-size:12px}
+hr{border:none; border-top:1px solid var(--border); margin:15px 0}
 </style>
 </head>
 <body>
@@ -55,11 +55,11 @@ canvas{background:var(--box); border-radius:8px; padding:10px; width:100%}
 
 <div id="appUtama" class="hidden">
 <div class="header">
-  <div class="running-text"><span id="namaWarungHeader">WARUNG IRWAN MARINIR</span></div>
-</div>
-<div class="btn-header">
-  <button onclick="logout()" class="merah" style="width:auto; padding:8px 12px">Logout</button>
-  <button onclick="toggleTema()" style="width:auto; padding:8px 12px">🌙</button>
+  <div class="header-left" id="namaWarungHeader">WARUNG IRWAN MARINIR - SELAMAT DATANG</div>
+  <div class="header-right">
+    <button onclick="logout()" class="merah" style="width:auto; padding:8px 12px">🚪</button>
+    <button onclick="toggleTema()" style="width:auto; padding:8px 12px; font-size:20px">🌙</button>
+  </div>
 </div>
 
 <div class="wrap">
@@ -68,7 +68,6 @@ canvas{background:var(--box); border-radius:8px; padding:10px; width:100%}
     <button class="hijau" onclick="show('barang')">BARANG</button>
     <button class="kuning" onclick="show('laporan')">LAPORAN</button>
     <button class="ungu" onclick="show('grafik')">GRAFIK</button>
-    <button class="merah" onclick="show('setting')">SETTING</button>
   </div>
   
   <div id="kasir" class="box">
@@ -124,6 +123,11 @@ canvas{background:var(--box); border-radius:8px; padding:10px; width:100%}
     <input id="inputBatasStok" type="number" placeholder="Contoh: 5">
     <small>Jika stok <= angka ini maka status TIPIS KUNING</small>
     <button onclick="simpanSetting()">SIMPAN PENGATURAN</button>
+    <hr>
+    <button class="biru" onclick="backupData()">BACKUP DATA KE CLIPBOARD</button>
+    <button class="biru" onclick="restoreDataPrompt()">RESTORE DATA</button>
+    <hr>
+    <button class="merah" onclick="resetSemuaData()">RESET SEMUA DATA</button>
   </div>
 </div>
 </div>
@@ -150,23 +154,24 @@ function loadData(){dbRef.on('value', snap=>{if(snap.exists()) db = snap.val(); 
 function save(){if(modeGuest){localStorage.setItem('db_kasir', JSON.stringify(db));}else{dbRef.set(db);}}
 function loadLocal(){let d=localStorage.getItem('db_kasir'); if(d) db=JSON.parse(d);}
 
+function backupData(){let dataString = JSON.stringify(db); navigator.clipboard.writeText(dataString).then(()=>{prompt('COPY DATA INI UNTUK BACKUP:', dataString); alert('Data berhasil di copy!');});}
+function restoreDataPrompt(){let dataString = prompt('PASTE DATA BACKUP DISINI:'); if(dataString){try{db=JSON.parse(dataString); save(); alert('RESTORE BERHASIL!'); show('kasir');}catch(e){alert('Data salah: '+e.message);}}}
+function resetSemuaData(){if(confirm('YAKIN HAPUS SEMUA DATA?')){db = {barang:[], laporan:[], nama:db.nama, tema:db.tema, batasStok:db.batasStok}; save(); alert('Data direset'); show('kasir');}}
+
 async function stopScanner(){if(html5QrCode && isScanning){isScanning=false;try{await html5QrCode.stop();}catch(e){}html5QrCode.clear();html5QrCode=null;}document.getElementById('reader-kasir').classList.add('hidden');document.getElementById('reader-barang').classList.add('hidden');scannerAktif=null;}
 function toggleTema(){document.body.classList.toggle('dark');db.tema=document.body.classList.contains('dark')?'gelap':'terang';save();}
 function show(id){
   stopScanner();
-  document.getElementById('kasir').classList.add('hidden');
-  document.getElementById('barang').classList.add('hidden');
-  document.getElementById('laporan').classList.add('hidden');
-  document.getElementById('grafik').classList.add('hidden');
-  document.getElementById('setting').classList.add('hidden');
+  ['kasir','barang','laporan','grafik','setting'].forEach(x=>document.getElementById(x).classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden');
-  document.getElementById('namaWarungHeader').innerText=(db.nama||'WARUNG').toUpperCase() + (modeGuest? " - MODE LOKAL" : "");
+  document.getElementById('namaWarungHeader').innerText=(db.nama||'WARUNG').toUpperCase() + (modeGuest? " - MODE LOKAL" : " - SELAMAT DATANG");
   document.getElementById('inputNamaWarung').value=db.nama;
   document.getElementById('inputBatasStok').value=db.batasStok;
   if(id=='kasir')tampilKasir();
   if(id=='barang')tampilBarang();
   if(id=='laporan')tampilLaporan();
   if(id=='grafik')gambarGrafik();
+  if(id=='setting')document.querySelector('.menu').insertAdjacentHTML('beforeend','<button class="merah" onclick="show(\'setting\')">SETTING</button>');
 }
 function simpanBarang(){let k=document.getElementById('kode').value;let n=document.getElementById('nama').value;let h=parseInt(document.getElementById('harga').value);let s=parseInt(document.getElementById('stok').value);if(!n||!h||s<0)return alert('Isi lengkap!');if(editId){let b=db.barang.find(x=>x.id==editId);Object.assign(b,{kode:k,nama:n,harga:h,stok:s});editId=null;}else{db.barang.push({id:Date.now(),kode:k,nama:n,harga:h,stok:s});}save();['kode','nama','harga','stok'].forEach(id=>document.getElementById(id).value='');tampilBarang();}
 function tampilBarang(){let html='';(db.barang||[]).forEach(b=>{let stokBadge=b.stok<=0?'<span class="badge">HABIS</span>':b.stok<=db.batasStok?'<span class="badge kuning">TIPIS</span>':'<span class="badge hijau">AMAN</span>';html+=`<div class="item"><div><b>${b.nama}</b> ${stokBadge}<br><small>Kode:${b.kode||'-'} | Stok:${b.stok} | Rp${b.harga.toLocaleString()}</small></div><div class="btn-group"><button class="kuning" onclick="editBarang(${b.id})">Edit</button><button class="merah" onclick="hapusBarang(${b.id})">Hapus</button></div></div>`;});document.getElementById('listBarang').innerHTML=html||'Belum ada barang';}
@@ -191,6 +196,11 @@ async function toggleScanner(tempat){if(scannerAktif==tempat)return stopScanner(
 function resetLaporan(){if(confirm('Reset?')){db.laporan=[];save();tampilLaporan();}}
 function simpanSetting(){db.nama=document.getElementById('inputNamaWarung').value;db.batasStok=parseInt(document.getElementById('inputBatasStok').value)||5;save();show('kasir');alert('Tersimpan!');}
 auth.onAuthStateChanged(user=>{if(user&&!modeGuest)loadData();});
+
+// Tambah tombol setting di menu
+document.addEventListener('DOMContentLoaded', ()=>{
+  document.querySelector('.menu').innerHTML += '<button class="merah" onclick="show(\'setting\')">SETTING</button>';
+});
 </script>
 </body>
-</html>
+  </html>
