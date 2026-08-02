@@ -3,9 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WARUNG IRWAN MARINIR - KASIR PRO V6.9.9.1 FIREBASE</title>
+<title>WARUNG IRWAN MARINIR - KASIR PRO V6.9.9.2 FIREBASE</title>
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-<!-- FIREBASE SDK -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -134,7 +133,6 @@ canvas{background:var(--box); border-radius:8px; padding:10px; width:100%}
 </div>
 
 <script>
-// 1. FIREBASE CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyCHwvOsZ8AjQpc64yHTxMxebRsqp88yx1Q",
   authDomain: "kasir-sembako-8972f.firebaseapp.com",
@@ -148,17 +146,14 @@ firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 const auth = firebase.auth();
 
-// 2. VARIABEL GLOBAL
 var db = {barang:[], laporan:[], nama:"WARUNG IRWAN MARINIR", tema:"terang", batasStok:5};
 var keranjang = []; var editId = null; var html5QrCode = null; var scannerAktif = null; var isScanning = false; var strukTerakhir = "";
 
-// 3. LOGIN FIREBASE
 function cekLogin(){
   let u = document.getElementById('userLogin').value;
   let p = document.getElementById('passLogin').value;
   document.getElementById('loadingText').innerText = 'Loading data...';
-  auth.signInWithEmailAndPassword(u, p)
-.catch((error) => { alert('Login Gagal: ' + error.message); document.getElementById('loadingText').innerText = ''; });
+  auth.signInWithEmailAndPassword(u, p).catch((error) => { alert('Login Gagal: ' + error.message); document.getElementById('loadingText').innerText = ''; });
 }
 function logout(){auth.signOut(); location.reload();}
 auth.onAuthStateChanged((user) => {
@@ -172,33 +167,27 @@ auth.onAuthStateChanged((user) => {
   }
 });
 
-// 4. LOAD & SAVE KE FIREBASE REALTIME
 function loadData(){
   database.ref('data').on('value', (snapshot) => {
     const data = snapshot.val();
     if(data){ db = data; } else { save(); }
     if(db.tema=='gelap') document.body.classList.add('dark'); else document.body.classList.remove('dark');
     document.getElementById('loadingText').innerText = '';
-    show('kasir');
+    setTimeout(()=>{ show('kasir'); }, 200); // FIX PUTIH
   });
 }
 function save(){ database.ref('data').set(db); }
 
-// 5. FUNGSI UTAMA - UDAH FIX NUMPUK
 async function stopScanner(){if(html5QrCode && isScanning){isScanning=false;try{await html5QrCode.stop();}catch(e){}html5QrCode.clear();html5QrCode=null;}document.querySelectorAll('[id^=reader]').forEach(r=>r.classList.add('hidden'));scannerAktif=null;}
 function toggleTema(){document.body.classList.toggle('dark');db.tema=document.body.classList.contains('dark')?'gelap':'terang';save();}
 function show(id){
   stopScanner();
-  // sembunyikan semua dulu biar gak numpuk
   document.getElementById('kasir').classList.add('hidden');
   document.getElementById('barang').classList.add('hidden');
   document.getElementById('laporan').classList.add('hidden');
   document.getElementById('grafik').classList.add('hidden');
   document.getElementById('setting').classList.add('hidden');
-
-  // tampilkan 1 yang dipilih
   document.getElementById(id).classList.remove('hidden');
-
   document.getElementById('namaWarungHeader').innerText=db.nama.toUpperCase() + " - SELAMAT DATANG";
   document.getElementById('inputNamaWarung').value=db.nama;
   document.getElementById('inputBatasStok').value=db.batasStok;
