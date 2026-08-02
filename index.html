@@ -173,7 +173,7 @@ function loadData(){
     if(data){ db = data; } else { save(); }
     if(db.tema=='gelap') document.body.classList.add('dark'); else document.body.classList.remove('dark');
     document.getElementById('loadingText').innerText = '';
-    setTimeout(()=>{ show('kasir'); }, 200); // FIX PUTIH
+    setTimeout(()=>{ show('kasir'); }, 300); // FIX PUTIH PAS LOGIN
   });
 }
 function save(){ database.ref('data').set(db); }
