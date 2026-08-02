@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WARUNG IRWAN MARINIR - KASIR PRO V6.9.9.1 FIREBASE</title>
+<title>WARUNG IRWAN MARINIR - KASIR PRO V6.9.9 FIREBASE</title>
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <!-- FIREBASE SDK -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -35,7 +35,7 @@ button.hijau{background:#2e7d32} button.merah{background:#c62828} button.kuning{
 .badge.hijau{background:#2e7d32}
 .total{font-size:32px; color:var(--primary); font-weight:bold; text-align:center}
 .keranjang-item{display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px dashed var(--border)}
-.hidden{display:none!important}
+.hidden{display:none}
 #struk{font-family:monospace; font-size:14px; white-space:pre-line; background:var(--bg); padding:10px; border-radius:8px}
 canvas{background:var(--box); border-radius:8px; padding:10px; width:100%}
 #reader-kasir, #reader-barang{width:100%; border-radius:10px; overflow:hidden; margin-top:10px; min-height:250px; background:#000; position:relative; z-index:999}
@@ -108,6 +108,117 @@ canvas{background:var(--box); border-radius:8px; padding:10px; width:100%}
     <p><b>Jumlah Transaksi:</b> <span id="jmlTrx">0</span></p>
     <div class="filter-box">
       <b>Filter Laporan</b>
+      <input type="date" id="filterHarian">
+      <button class="biru" onclick="filterHarian()">TAMPILKAN HARIAN</button>
+      <input type="month" id="filterBulanan">
+      <button class="ungu" onclick="filterBulanan()">TAMPILKAN BULAN</button>
+      <button class="kuning" onclick="resetFilter()">RESET FILTER</button>
+      <div id="hasilFilter" style="margin-top:10px; font-weight:bold; color:green;"></div>
+    </div>
+    <button class="merah" onclick="resetLaporan()">RESET LAPORAN</button>
+    <hr><h4>RIWAYAT TRANSAKSI</h4><div id="riwayat" class="list"></div>
+  </div>
+  <div id="grafik" class="box hidden"><h3>📈 GRAFIK 7 HARI TERAKHIR</h3><canvas id="chart" height="250"></canvas></div>
+  <div id="setting" class="box hidden">
+    <h3>⚙️ PENGATURAN</h3>
+    <input id="inputNamaWarung" placeholder="Nama Warung">
+    <label><b>Batas Stok TIPIS:</b></label>
+    <input id="inputBatasStok" type="number" placeholder="Contoh: 5">
+    <small>Jika stok <= angka ini maka status TIPIS KUNING</small>
+    <button onclick="simpanSetting()">SIMPAN PENGATURAN</button>
+    <hr><button onclick="backupData()">BACKUP DATA KE CLIPBOARD</button>
+    <button onclick="restoreData()">RESTORE DATA</button>
+    <hr><button class="merah" onclick="resetSemua()">RESET SEMUA DATA</button>
+  </div>
+</div>
+</div>
+
+<script>
+// 1. FIREBASE CONFIG
+const firebaseConfig = {
+  apiKey: "AIzaSyCHwvOsZ8AjQpc64yHTxMxebRsqp88yx1Q",
+  authDomain: "kasir-sembako-8972f.firebaseapp.com",
+  databaseURL: "https://kasir-sembako-8972f-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "kasir-sembako-8972f",
+  storageBucket: "kasir-sembako-8972f.firebasestorage.app",
+  messagingSenderId: "669992382893",
+  appId: "1:669992382893:web:53cf405273cf45723b3124"
+};
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+const auth = firebase.auth();
+
+// 2. VARIABEL GLOBAL
+var db = {barang:[], laporan:[], nama:"WARUNG IRWAN MARINIR", tema:"terang", batasStok:5};
+var keranjang = []; var editId = null; var html5QrCode = null; var scannerAktif = null; var isScanning = false; var strukTerakhir = "";
+
+// 3. LOGIN FIREBASE
+function cekLogin(){
+  let u = document.getElementById('userLogin').value;
+  let p = document.getElementById('passLogin').value;
+  document.getElementById('loadingText').innerText = 'Loading data...';
+  auth.signInWithEmailAndPassword(u, p)
+ .then(() => { })
+ .catch((error) => { alert('Login Gagal: ' + error.message); document.getElementById('loadingText').innerText = ''; });
+}
+function logout(){auth.signOut(); location.reload();}
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    document.getElementById('halamanLogin').style.display = 'none';
+    document.getElementById('appUtama').style.display = 'block';
+    loadData();
+  } else {
+    document.getElementById('halamanLogin').style.display = 'flex';
+    document.getElementById('appUtama').style.display = 'none';
+  }
+});
+
+// 4. LOAD & SAVE KE FIREBASE REALTIME
+function loadData(){
+  database.ref('data').on('value', (snapshot) => {
+    const data = snapshot.val();
+    if(data){ db = data; } else { save(); }
+    if(db.tema=='gelap') document.body.classList.add('dark'); else document.body.classList.remove('dark');
+    document.getElementById('loadingText').innerText = '';
+    show('kasir');
+  });
+}
+function save(){ database.ref('data').set(db); }
+
+// 5. FUNGSI UTAMA
+async function stopScanner(){if(html5QrCode && isScanning){isScanning=false;try{await html5QrCode.stop();}catch(e){}html5QrCode.clear();html5QrCode=null;}document.querySelectorAll('[id^=reader]').forEach(r=>r.classList.add('hidden'));scannerAktif=null;}
+function toggleTema(){document.body.classList.toggle('dark');db.tema=document.body.classList.contains('dark')?'gelap':'terang';save();}
+function show(id){stopScanner();document.querySelectorAll('.box').forEach(b=>{if(b.id)b.classList.add('hidden')});document.getElementById(id).classList.remove('hidden');document.getElementById('namaWarungHeader').innerText=db.nama.toUpperCase() + " - SELAMAT DATANG";document.getElementById('inputNamaWarung').value=db.nama;document.getElementById('inputBatasStok').value=db.batasStok;if(id=='kasir')tampilKasir();if(id=='barang')tampilBarang();if(id=='laporan')tampilLaporan();if(id=='grafik')gambarGrafik();}
+function simpanBarang(){let k=document.getElementById('kode').value;let n=document.getElementById('nama').value;let h=parseInt(document.getElementById('harga').value);let s=parseInt(document.getElementById('stok').value);if(!n||!h||s<0)return alert('Isi lengkap!');if(editId){let b=db.barang.find(x=>x.id==editId);b.kode=k;b.nama=n;b.harga=h;b.stok=s;editId=null;}else{db.barang.push({id:Date.now(),kode:k,nama:n,harga:h,stok:s});}save();document.getElementById('kode').value='';document.getElementById('nama').value='';document.getElementById('harga').value='';document.getElementById('stok').value='';tampilBarang();alert('Tersimpan ke Cloud!');}
+function tampilBarang(){let html='';db.barang.forEach(b=>{let stokBadge;if(b.stok<=0){stokBadge='<span class="badge">HABIS</span>';}else if(b.stok<=db.batasStok){stokBadge='<span class="badge kuning">TIPIS</span>';}else{stokBadge='<span class="badge hijau">AMAN</span>';}html+=`<div class="item"><div class="info"><b>${b.nama}</b> ${stokBadge}<br><small>Kode:${b.kode||'-'} | Stok: ${b.stok} | Rp${b.harga.toLocaleString()}</small></div><div class="btn-group"><button class="kuning" onclick="editBarang(${b.id})">Edit</button><button class="merah" onclick="hapusBarang(${b.id})">Hapus</button></div></div>`;});document.getElementById('listBarang').innerHTML=html||'Belum ada barang';}
+function editBarang(id){let b=db.barang.find(x=>x.id==id);document.getElementById('kode').value=b.kode||'';document.getElementById('nama').value=b.nama;document.getElementById('harga').value=b.harga;document.getElementById('stok').value=b.stok;editId=id;show('barang');}
+function hapusBarang(id){if(confirm('Hapus barang ini?')){db.barang=db.barang.filter(b=>b.id!=id);save();tampilBarang();}}
+function tampilKasir(){let key=document.getElementById('cari').value.toLowerCase();let html='';db.barang.forEach(b=>{if(b.nama.toLowerCase().includes(key)||(b.kode&&b.kode.includes(key))){let disabled=b.stok<=0?'style="opacity:0.5; cursor:not-allowed"':`onclick="add(${b.id})"`;let badge=b.stok<=0?'<span class="badge">HABIS</span>':b.stok<=db.batasStok?'<span class="badge kuning">TIPIS</span>':'<span class="badge hijau">AMAN</span>';html+=`<div class="item" ${disabled}><div class="info"><b>${b.nama}</b> ${badge}<br><small>Kode:${b.kode||'-'} | Rp${b.harga.toLocaleString()}</small></div></div>`;}});document.getElementById('listBarangKasir').innerHTML=html||'Barang tidak ditemukan';}
+function add(id){let b=db.barang.find(x=>x.id==id);if(b.stok<=0)return alert('Stok habis!');let k=keranjang.find(x=>x.id==id);if(k){if(k.qty>=b.stok)return alert('Stok tidak cukup!');k.qty++;}else{keranjang.push({id:b.id,nama:b.nama,harga:b.harga,qty:1});}tampilKeranjang();}
+function tampilKeranjang(){if(keranjang.length==0){document.getElementById('keranjang').innerHTML='Kosong';document.getElementById('total').innerText='0';return;}let total=0;let html='';keranjang.forEach((k,i)=>{let sub=k.harga*k.qty;total+=sub;html+=`<div class="keranjang-item"><span>${k.nama} x${k.qty}</span><span>Rp${sub.toLocaleString()} <button style="width:auto;padding:2px 8px;background:red" onclick="hapusKeranjang(${i})">X</button></span></div>`;});document.getElementById('keranjang').innerHTML=html;document.getElementById('total').innerText=total.toLocaleString();hitungKembali();}
+function hapusKeranjang(i){keranjang.splice(i,1);tampilKeranjang();}
+function hitungKembali(){let total=parseInt(document.getElementById('total').innerText.replace(/\./g,''))||0;let bayar=parseInt(document.getElementById('bayar').value)||0;document.getElementById('kembali').innerText=(bayar-total).toLocaleString();}
+function bayar(){let total=parseInt(document.getElementById('total').innerText.replace(/\./g,''))||0;let bayar=parseInt(document.getElementById('bayar').value)||0;if(total==0)return alert('Keranjang kosong');if(bayar<total)return alert('Uang kurang!');keranjang.forEach(k=>{let b=db.barang.find(x=>x.id==k.id);b.stok-=k.qty;});let trx={waktu:new Date().toLocaleString('id-ID'),total:total,bayar:bayar,kembali:bayar-total,detail:[...keranjang]};db.laporan.push(trx);save();buatStruk(trx);cetakBluetooth(strukTerakhir);alert('TRANSAKSI SUKSES & TERSIMPAN DI CLOUD!');batal();}
+function buatStruk(trx){let tgl=trx.waktu;let struk=`${db.nama}\n============================\n${tgl}\n============================\n`;trx.detail.forEach(d=>{let nama = d.nama.length > 20? d.nama.substring(0,20) : d.nama;struk+=`${nama}\n ${d.qty} x ${d.harga.toLocaleString()} = ${ (d.qty*d.harga).toLocaleString() }\n`});struk+=`============================\nTOTAL : Rp${trx.total.toLocaleString()}\nBAYAR : Rp${trx.bayar.toLocaleString()}\nKEMBALI : Rp${trx.kembali.toLocaleString()}\n============================\nTERIMA KASIH\n`;strukTerakhir = struk;document.getElementById('struk').innerText=struk;document.getElementById('struk').classList.remove('hidden');navigator.clipboard.writeText(struk);}
+async function cetakBluetooth(teks){if(!navigator.bluetooth){ alert('Browser tidak support Bluetooth. Pakai Chrome Android'); return; }try {alert('Mencari Printer Bluetooth...');const device = await navigator.bluetooth.requestDevice({acceptAllDevices: true,optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']});const server = await device.gatt.connect();const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');const characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');const encoder = new TextEncoder();const data = encoder.encode(teks);await characteristic.writeValue(data);alert('Struk terkirim ke printer: ' + device.name);} catch(error) {alert('Gagal print: ' + error.message + '\n\nPastikan Bluetooth nyala & printer sudah di-pair');}}
+function printUlang(){if(strukTerakhir=="") return alert("Belum ada transaksi");cetakBluetooth(strukTerakhir);}
+function batal(){keranjang=[];document.getElementById('bayar').value='';document.getElementById('struk').classList.add('hidden');tampilKeranjang();tampilKasir();}
+function parseTanggal(tglString){let [tgl,jam] = tglString.split(', ');let [d,m,y] = tgl.split('/');return new Date(y,m-1,d);}
+function tampilLaporan(dataFilter = db.laporan){let total=0; dataFilter.forEach(l=>total+=l.total);document.getElementById('totalJual').innerText=total.toLocaleString();document.getElementById('jmlTrx').innerText=dataFilter.length;let html='';for(let i=dataFilter.length-1;i>=0;i--){let l=dataFilter[i]; let tgl=l.waktu;html+=`<div class="item"><div class="info"><b>${tgl}</b><br>`;l.detail.forEach(d=>html+=`${d.nama} x${d.qty}<br>`);html+=`</div><div><b>Rp${l.total.toLocaleString()}</b></div></div>`;}document.getElementById('riwayat').innerHTML=html||'Belum ada';document.getElementById('hasilFilter').innerHTML = '';}
+function resetFilter(){document.getElementById('filterHarian').value = '';document.getElementById('filterBulanan').value = '';tampilLaporan();}
+function filterHarian(){let tgl = document.getElementById('filterHarian').value; if(!tgl) return alert('Pilih tanggal dulu');let [y,m,d] = tgl.split('-');let hasil = db.laporan.filter(l => {let dt = parseTanggal(l.waktu);return dt.getDate()==parseInt(d) && dt.getMonth()+1==parseInt(m) && dt.getFullYear()==parseInt(y);});tampilLaporan(hasil);let total = hasil.reduce((sum,l)=>sum+l.total,0);document.getElementById('hasilFilter').innerHTML = `Hasil ${d}/${m}/${y}: ${hasil.length} transaksi, Total Rp${total.toLocaleString()}`;}
+function filterBulanan(){let bln = document.getElementById('filterBulanan').value; if(!bln) return alert('Pilih bulan dulu');let [y,m] = bln.split('-');let hasil = db.laporan.filter(l => {let dt = parseTanggal(l.waktu);return dt.getMonth()+1==parseInt(m) && dt.getFullYear()==parseInt(y);});tampilLaporan(hasil);let total = hasil.reduce((sum,l)=>sum+l.total,0);document.getElementById('hasilFilter').innerHTML = `Hasil ${m}/${y}: ${hasil.length} transaksi, Total Rp${total.toLocaleString()}`;}
+function gambarGrafik(){const ctx=document.getElementById('chart').getContext('2d');const width=ctx.canvas.width=ctx.canvas.parentElement.clientWidth;ctx.clearRect(0,0,width,250);let data7hari=[]; let labels=[];for(let i=6;i>=0;i--){let tgl=new Date(); tgl.setDate(tgl.getDate()-i);let total=db.laporan.filter(l=>{let dt=parseTanggal(l.waktu); return dt.toDateString()==tgl.toDateString();}).reduce((sum,l)=>sum+l.total,0);data7hari.push(total); labels.push(tgl.toLocaleDateString('id-ID',{weekday:'short'}));}const warna = ['#e65100', '#1565c0', '#2e7d32', '#6a1b9a', '#f9a825', '#c62828', '#0277bd'];let max=Math.max(...data7hari,10000); let barWidth=(width-20)/7-10;data7hari.forEach((val,i)=>{let h=max>0?(val/max)*200:0; let x = i*(barWidth+10)+10;ctx.fillStyle=warna[i]; ctx.fillRect(x,230-h,barWidth,h);ctx.fillStyle='var(--text)'; ctx.font='bold 12px Arial'; ctx.textAlign='center'; ctx.fillText(labels[i], x+barWidth/2, 245);ctx.font='11px Arial'; ctx.fillText('Rp'+(val/1000)+'k', x+barWidth/2, 225-h);});}
+async function toggleScanner(tempat){if(scannerAktif==tempat){await stopScanner();return;}await stopScanner();const readerDiv=document.getElementById('reader-'+tempat);readerDiv.classList.remove('hidden');scannerAktif=tempat;isScanning=true;html5QrCode=new Html5Qrcode("reader-"+tempat);html5QrCode.start({facingMode:"environment"},{fps:10,qrbox:250},async(decodedText)=>{if(!isScanning)return;await stopScanner();if(tempat=='barang'){document.getElementById('kode').value=decodedText;alert('Kode: '+decodedText+' sudah terisi.');}if(tempat=='kasir'){let b=db.barang.find(x=>x.kode==decodedText);if(b){add(b.id);}else{alert('Barang dengan kode '+decodedText+' tidak ditemukan!');}}},(errorMessage)=>{}).catch(err=>{alert('Gagal buka kamera: '+err+'\n\nCoba buka di Chrome dan izinkan kamera');stopScanner();});}
+function resetLaporan(){if(confirm('Reset laporan?')){db.laporan=[];save();tampilLaporan();}}
+function simpanSetting(){db.nama=document.getElementById('inputNamaWarung').value||"WARUNG IRWAN MARINIR";db.batasStok=parseInt(document.getElementById('inputBatasStok').value)||5;save();show('kasir');alert('Pengaturan Tersimpan ke Cloud!');}
+function backupData(){navigator.clipboard.writeText(JSON.stringify(db));alert('Data sudah di-copy!');}
+function restoreData(){let data=prompt('Paste data backup:');if(data){try{db=JSON.parse(data);save();alert('Restore berhasil!');show('kasir');}catch(e){alert('Data rusak!')}}
+}
+function resetSemua(){if(confirm('YAKIN HAPUS SEMUA?')){db={barang:[],laporan:[],nama:db.nama,tema:db.tema,batasStok:5};save();show('kasir');alert('Data direset');}}
+</script>
+</body>
+</html>      <b>Filter Laporan</b>
       <input type="date" id="filterHarian">
       <button class="biru" onclick="filterHarian()">TAMPILKAN HARIAN</button>
       <input type="month" id="filterBulanan">
