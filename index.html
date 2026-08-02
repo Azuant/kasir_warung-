@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WARUNG IRWAN MARINIR - KASIR PRO V6.9.9.4 TEST</title>
+<title>WARUNG IRWAN MARINIR - KASIR PRO V6.9.9.5</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <style>
 :root{--bg:#f5f5f5; --box:#fff; --text:#000; --primary:#1565c0; --border:#ddd;}
@@ -20,7 +23,7 @@ body{font-family:'Segoe UI',Arial; margin:0; background:var(--bg); color:var(--t
 input,button{width:100%; padding:12px; margin:5px 0; border-radius:8px; border:1px solid var(--border); font-size:16px; background:var(--box); color:var(--text)}
 button{background:var(--primary); color:white; border:none; font-weight:bold; cursor:pointer; transition:0.2s}
 button:hover{opacity:0.85}
-button.hijau{background:#2e7d32} button.merah{background:#c62828} button.kuning{background:#f9a825; color:#000} button.ungu{background:#6a1b9a} button.biru{background:#0277bd} button.orange{background:#e65100}
+button.hijau{background:#2e7d32} button.merah{background:#c62828} button.kuning{background:#f9a825; color:#000} button.ungu{background:#6a1b9a} button.biru{background:#0277bd} button.orange{background:#e65100} button.abu{background:#555}
 .menu{display:grid; grid-template-columns:repeat(5, 1fr); gap:8px}
 .list{max-height:400px; overflow-y:auto; border:1px solid var(--border); border-radius:8px}
 .item{display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid var(--border); gap:10px}
@@ -36,17 +39,28 @@ button.hijau{background:#2e7d32} button.merah{background:#c62828} button.kuning{
 canvas{background:var(--box); border-radius:8px; padding:10px; width:100%}
 #reader-kasir, #reader-barang{width:100%; border-radius:10px; overflow:hidden; margin-top:10px; min-height:250px; background:#000; position:relative; z-index:999}
 .filter-box{padding:10px; background:var(--bg); border-radius:8px; margin:10px 0}
+#loginBox{max-width:400px; margin:50px auto}
 </style>
 </head>
 <body>
 
-<div id="appUtama">
+<div id="loginBox" class="box">
+  <h2 style="text-align:center">LOGIN KASIR</h2>
+  <input id="email" type="email" placeholder="Email Firebase">
+  <input id="pass" type="password" placeholder="Password">
+  <button class="hijau" onclick="login()">LOGIN</button>
+  <button class="abu" onclick="loginGuest()">LANJUT TANPA LOGIN - MODE LOKAL</button>
+  <p id="loginError" style="color:red; text-align:center"></p>
+</div>
+
+<div id="appUtama" class="hidden">
 <div class="header">
   <div class="running-text">
-    <span id="namaWarungHeader">WARUNG IRWAN MARINIR - MODE TEST TANPA LOGIN</span>
+    <span id="namaWarungHeader">WARUNG IRWAN MARINIR</span>
   </div>
 </div>
 <div class="btn-header">
+  <button onclick="logout()" class="merah" style="width:auto; padding:8px 12px">Logout</button>
   <button onclick="toggleTema()" style="width:auto; padding:8px 12px">🌙</button>
 </div>
 
@@ -59,7 +73,6 @@ canvas{background:var(--box); border-radius:8px; padding:10px; width:100%}
     <button class="merah" onclick="show('setting')">SETTING</button>
   </div>
   <div id="kasir" class="box">
-    <h3 style="color:red; text-align:center">MODE TEST - DATA TIDAK TERSIMPAN</h3>
     <button class="ungu" onclick="toggleScanner('kasir')">📷 SCAN BARCODE</button>
     <div id="reader-kasir" class="hidden"><button class="merah" onclick="stopScanner()" style="position:absolute; top:10px; right:10px; width:auto; z-index:1000">TUTUP KAMERA</button></div>
     <input id="cari" type="text" placeholder="🔍 Cari nama barang..." onkeyup="tampilKasir()">
@@ -113,24 +126,51 @@ canvas{background:var(--box); border-radius:8px; padding:10px; width:100%}
 </div>
 
 <script>
-var db = {barang:[{id:1,kode:"123",nama:"AQUA 600ML",harga:3000,stok:10}], laporan:[], nama:"WARUNG IRWAN MARINIR", tema:"terang", batasStok:5};
-var keranjang = []; var editId = null; var html5QrCode = null; var scannerAktif = null; var isScanning = false; var strukTerakhir = "";
+// 1. CONFIG FIREBASE KAMU
+var firebaseConfig = {
+  apiKey: "AIzaSyBxxx",
+  authDomain: "kasir-sembako-8972f.firebaseapp.com",
+  databaseURL: "https://kasir-sembako-8972f-default-rtdb.firebaseio.com",
+  projectId: "kasir-sembako-8972f"
+};
+firebase.initializeApp(firebaseConfig);
+var dbRef = firebase.database().ref();
+var auth = firebase.auth();
 
-function loadData(){show('kasir');}
-function save(){localStorage.setItem('db_kasir', JSON.stringify(db));}
+var db = {barang:[], laporan:[], nama:"WARUNG IRWAN MARINIR", tema:"terang", batasStok:5};
+var keranjang = []; var editId = null; var html5QrCode = null; var scannerAktif = null; var isScanning = false; var strukTerakhir = ""; var modeGuest = false;
+
+function login(){
+  document.getElementById('loginError').innerText="Loading...";
+  auth.signInWithEmailAndPassword(document.getElementById('email').value, document.getElementById('pass').value)
+ .then(()=>{modeGuest=false; loadData();})
+ .catch(e=>{document.getElementById('loginError').innerText="Login Gagal: "+e.message;});
+}
+function loginGuest(){modeGuest=true; document.getElementById('loginBox').classList.add('hidden'); document.getElementById('appUtama').classList.remove('hidden'); loadLocal(); show('kasir'); alert('Mode Lokal Aktif. Data hanya di HP ini');}
+function logout(){if(!modeGuest)auth.signOut(); document.getElementById('appUtama').classList.add('hidden'); document.getElementById('loginBox').classList.remove('hidden');}
+
+function loadData(){
+  if(modeGuest) return;
+  dbRef.on('value', snap=>{
+    if(snap.exists()) db = snap.val();
+    document.getElementById('loginBox').classList.add('hidden');
+    document.getElementById('appUtama').classList.remove('hidden');
+    show('kasir');
+  });
+}
+function save(){
+  if(modeGuest){localStorage.setItem('db_kasir', JSON.stringify(db));}
+  else{dbRef.set(db);}
+}
 function loadLocal(){let d=localStorage.getItem('db_kasir'); if(d) db=JSON.parse(d);}
 
 async function stopScanner(){if(html5QrCode && isScanning){isScanning=false;try{await html5QrCode.stop();}catch(e){}html5QrCode.clear();html5QrCode=null;}document.querySelectorAll('[id^=reader]').forEach(r=>r.classList.add('hidden'));scannerAktif=null;}
 function toggleTema(){document.body.classList.toggle('dark');db.tema=document.body.classList.contains('dark')?'gelap':'terang';save();}
 function show(id){
   stopScanner();
-  document.getElementById('kasir').classList.add('hidden');
-  document.getElementById('barang').classList.add('hidden');
-  document.getElementById('laporan').classList.add('hidden');
-  document.getElementById('grafik').classList.add('hidden');
-  document.getElementById('setting').classList.add('hidden');
+  ['kasir','barang','laporan','grafik','setting'].forEach(x=>document.getElementById(x).classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden');
-  document.getElementById('namaWarungHeader').innerText=(db.nama||'WARUNG').toUpperCase() + " - MODE TEST";
+  document.getElementById('namaWarungHeader').innerText=(db.nama||'WARUNG').toUpperCase() + (modeGuest? " - MODE LOKAL" : "");
   document.getElementById('inputNamaWarung').value=db.nama;
   document.getElementById('inputBatasStok').value=db.batasStok;
   if(id=='kasir')tampilKasir();
@@ -138,7 +178,7 @@ function show(id){
   if(id=='laporan')tampilLaporan();
   if(id=='grafik')gambarGrafik();
 }
-function simpanBarang(){let k=document.getElementById('kode').value;let n=document.getElementById('nama').value;let h=parseInt(document.getElementById('harga').value);let s=parseInt(document.getElementById('stok').value);if(!n||!h||s<0)return alert('Isi lengkap!');if(editId){let b=db.barang.find(x=>x.id==editId);b.kode=k;b.nama=n;b.harga=h;b.stok=s;editId=null;}else{db.barang.push({id:Date.now(),kode:k,nama:n,harga:h,stok:s});}save();document.getElementById('kode').value='';document.getElementById('nama').value='';document.getElementById('harga').value='';document.getElementById('stok').value='';tampilBarang();alert('Tersimpan di HP!');}
+function simpanBarang(){let k=document.getElementById('kode').value;let n=document.getElementById('nama').value;let h=parseInt(document.getElementById('harga').value);let s=parseInt(document.getElementById('stok').value);if(!n||!h||s<0)return alert('Isi lengkap!');if(editId){let b=db.barang.find(x=>x.id==editId);b.kode=k;b.nama=n;b.harga=h;b.stok=s;editId=null;}else{db.barang.push({id:Date.now(),kode:k,nama:n,harga:h,stok:s});}save();['kode','nama','harga','stok'].forEach(id=>document.getElementById(id).value='');tampilBarang();alert('Tersimpan!');}
 function tampilBarang(){let html='';(db.barang||[]).forEach(b=>{let stokBadge;if(b.stok<=0){stokBadge='<span class="badge">HABIS</span>';}else if(b.stok<=db.batasStok){stokBadge='<span class="badge kuning">TIPIS</span>';}else{stokBadge='<span class="badge hijau">AMAN</span>';}html+=`<div class="item"><div class="info"><b>${b.nama}</b> ${stokBadge}<br><small>Kode:${b.kode||'-'} | Stok: ${b.stok} | Rp${b.harga.toLocaleString()}</small></div><div class="btn-group"><button class="kuning" onclick="editBarang(${b.id})">Edit</button><button class="merah" onclick="hapusBarang(${b.id})">Hapus</button></div></div>`;});document.getElementById('listBarang').innerHTML=html||'Belum ada barang';}
 function editBarang(id){let b=db.barang.find(x=>x.id==id);document.getElementById('kode').value=b.kode||'';document.getElementById('nama').value=b.nama;document.getElementById('harga').value=b.harga;document.getElementById('stok').value=b.stok;editId=id;show('barang');}
 function hapusBarang(id){if(confirm('Hapus barang ini?')){db.barang=db.barang.filter(b=>b.id!=id);save();tampilBarang();}}
@@ -149,19 +189,20 @@ function hapusKeranjang(i){keranjang.splice(i,1);tampilKeranjang();}
 function hitungKembali(){let total=parseInt(document.getElementById('total').innerText.replace(/\./g,''))||0;let bayar=parseInt(document.getElementById('bayar').value)||0;document.getElementById('kembali').innerText=(bayar-total).toLocaleString();}
 function bayar(){let total=parseInt(document.getElementById('total').innerText.replace(/\./g,''))||0;let bayar=parseInt(document.getElementById('bayar').value)||0;if(total==0)return alert('Keranjang kosong');if(bayar<total)return alert('Uang kurang!');keranjang.forEach(k=>{let b=db.barang.find(x=>x.id==k.id);b.stok-=k.qty;});let trx={waktu:new Date().toLocaleString('id-ID'),total:total,bayar:bayar,kembali:bayar-total,detail:[...keranjang]};db.laporan.push(trx);save();buatStruk(trx);cetakBluetooth(strukTerakhir);alert('TRANSAKSI SUKSES!');batal();}
 function buatStruk(trx){let tgl=trx.waktu;let struk=`${db.nama}\n============================\n${tgl}\n============================\n`;trx.detail.forEach(d=>{let nama = d.nama.length > 20? d.nama.substring(0,20) : d.nama;struk+=`${nama}\n ${d.qty} x ${d.harga.toLocaleString()} = ${ (d.qty*d.harga).toLocaleString() }\n`});struk+=`============================\nTOTAL : Rp${trx.total.toLocaleString()}\nBAYAR : Rp${trx.bayar.toLocaleString()}\nKEMBALI : Rp${trx.kembali.toLocaleString()}\n============================\nTERIMA KASIH\n`;strukTerakhir = struk;document.getElementById('struk').innerText=struk;document.getElementById('struk').classList.remove('hidden');navigator.clipboard.writeText(struk);}
-async function cetakBluetooth(teks){if(!navigator.bluetooth){ alert('Browser tidak support Bluetooth. Pakai Chrome Android'); return; }try {alert('Mencari Printer Bluetooth...');const device = await navigator.bluetooth.requestDevice({acceptAllDevices: true,optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']});const server = await device.gatt.connect();const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');const characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');const encoder = new TextEncoder();const data = encoder.encode(teks);await characteristic.writeValue(data);alert('Struk terkirim ke printer: ' + device.name);} catch(error) {alert('Gagal print: ' + error.message + '\n\nPastikan Bluetooth nyala & printer sudah di-pair');}}
+async function cetakBluetooth(teks){if(!navigator.bluetooth){ alert('Browser tidak support Bluetooth. Pakai Chrome Android'); return; }try {alert('Mencari Printer Bluetooth...');const device = await navigator.bluetooth.requestDevice({acceptAllDevices: true});const server = await device.gatt.connect();const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');const characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');const encoder = new TextEncoder();await characteristic.writeValue(encoder.encode(teks));alert('Struk terkirim ke printer: ' + device.name);} catch(error) {alert('Gagal print: ' + error.message);}}
 function printUlang(){if(strukTerakhir=="") return alert("Belum ada transaksi");cetakBluetooth(strukTerakhir);}
 function batal(){keranjang=[];document.getElementById('bayar').value='';document.getElementById('struk').classList.add('hidden');tampilKeranjang();tampilKasir();}
 function parseTanggal(tglString){let [tgl,jam] = tglString.split(', ');let [d,m,y] = tgl.split('/');return new Date(y,m-1,d);}
-function tampilLaporan(dataFilter = db.laporan||[]){let total=0; dataFilter.forEach(l=>total+=l.total);document.getElementById('totalJual').innerText=total.toLocaleString();document.getElementById('jmlTrx').innerText=dataFilter.length;let html='';for(let i=dataFilter.length-1;i>=0;i--){let l=dataFilter[i]; let tgl=l.waktu;html+=`<div class="item"><div class="info"><b>${tgl}</b><br>`;l.detail.forEach(d=>html+=`${d.nama} x${d.qty}<br>`);html+=`</div><div><b>Rp${l.total.toLocaleString()}</b></div></div>`;}document.getElementById('riwayat').innerHTML=html||'Belum ada';document.getElementById('hasilFilter').innerHTML = '';}
+function tampilLaporan(dataFilter = db.laporan||[]){let total=0; dataFilter.forEach(l=>total+=l.total);document.getElementById('totalJual').innerText=total.toLocaleString();document.getElementById('jmlTrx').innerText=dataFilter.length;let html='';for(let i=dataFilter.length-1;i>=0;i--){let l=dataFilter[i]; html+=`<div class="item"><div class="info"><b>${l.waktu}</b><br>`;l.detail.forEach(d=>html+=`${d.nama} x${d.qty}<br>`);html+=`</div><div><b>Rp${l.total.toLocaleString()}</b></div></div>`;}document.getElementById('riwayat').innerHTML=html||'Belum ada';document.getElementById('hasilFilter').innerHTML = '';}
 function resetFilter(){document.getElementById('filterHarian').value = '';document.getElementById('filterBulanan').value = '';tampilLaporan();}
 function filterHarian(){let tgl = document.getElementById('filterHarian').value; if(!tgl) return alert('Pilih tanggal dulu');let [y,m,d] = tgl.split('-');let hasil = (db.laporan||[]).filter(l => {let dt = parseTanggal(l.waktu);return dt.getDate()==parseInt(d) && dt.getMonth()+1==parseInt(m) && dt.getFullYear()==parseInt(y);});tampilLaporan(hasil);let total = hasil.reduce((sum,l)=>sum+l.total,0);document.getElementById('hasilFilter').innerHTML = `Hasil ${d}/${m}/${y}: ${hasil.length} transaksi, Total Rp${total.toLocaleString()}`;}
 function filterBulanan(){let bln = document.getElementById('filterBulanan').value; if(!bln) return alert('Pilih bulan dulu');let [y,m] = bln.split('-');let hasil = (db.laporan||[]).filter(l => {let dt = parseTanggal(l.waktu);return dt.getMonth()+1==parseInt(m) && dt.getFullYear()==parseInt(y);});tampilLaporan(hasil);let total = hasil.reduce((sum,l)=>sum+l.total,0);document.getElementById('hasilFilter').innerHTML = `Hasil ${m}/${y}: ${hasil.length} transaksi, Total Rp${total.toLocaleString()}`;}
 function gambarGrafik(){const ctx=document.getElementById('chart').getContext('2d');const width=ctx.canvas.width=ctx.canvas.parentElement.clientWidth;ctx.clearRect(0,0,width,250);let data7hari=[]; let labels=[];for(let i=6;i>=0;i--){let tgl=new Date(); tgl.setDate(tgl.getDate()-i);let total=(db.laporan||[]).filter(l=>{let dt=parseTanggal(l.waktu); return dt.toDateString()==tgl.toDateString();}).reduce((sum,l)=>sum+l.total,0);data7hari.push(total); labels.push(tgl.toLocaleDateString('id-ID',{weekday:'short'}));}const warna = ['#e65100', '#1565c0', '#2e7d32', '#6a1b9a', '#f9a825', '#c62828', '#0277bd'];let max=Math.max(...data7hari,10000); let barWidth=(width-20)/7-10;data7hari.forEach((val,i)=>{let h=max>0?(val/max)*200:0; let x = i*(barWidth+10)+10;ctx.fillStyle=warna[i]; ctx.fillRect(x,230-h,barWidth,h);ctx.fillStyle='var(--text)'; ctx.font='bold 12px Arial'; ctx.textAlign='center'; ctx.fillText(labels[i], x+barWidth/2, 245);ctx.font='11px Arial'; ctx.fillText('Rp'+(val/1000)+'k', x+barWidth/2, 225-h);});}
-async function toggleScanner(tempat){if(scannerAktif==tempat){await stopScanner();return;}await stopScanner();const readerDiv=document.getElementById('reader-'+tempat);readerDiv.classList.remove('hidden');scannerAktif=tempat;isScanning=true;html5QrCode=new Html5Qrcode("reader-"+tempat);html5QrCode.start({facingMode:"environment"},{fps:10,qrbox:250},async(decodedText)=>{if(!isScanning)return;await stopScanner();if(tempat=='barang'){document.getElementById('kode').value=decodedText;alert('Kode: '+decodedText+' sudah terisi.');}if(tempat=='kasir'){let b=db.barang.find(x=>x.kode==decodedText);if(b){add(b.id);}else{alert('Barang dengan kode '+decodedText+' tidak ditemukan!');}}},(errorMessage)=>{}).catch(err=>{alert('Gagal buka kamera: '+err+'\n\nCoba buka di Chrome dan izinkan kamera');stopScanner();});}
+async function toggleScanner(tempat){if(scannerAktif==tempat){await stopScanner();return;}await stopScanner();const readerDiv=document.getElementById('reader-'+tempat);readerDiv.classList.remove('hidden');scannerAktif=tempat;isScanning=true;html5QrCode=new Html5Qrcode("reader-"+tempat);html5QrCode.start({facingMode:"environment"},{fps:10,qrbox:250},async(decodedText)=>{if(!isScanning)return;await stopScanner();if(tempat=='barang'){document.getElementById('kode').value=decodedText;alert('Kode: '+decodedText+' sudah terisi.');}if(tempat=='kasir'){let b=db.barang.find(x=>x.kode==decodedText);if(b){add(b.id);}else{alert('Barang dengan kode '+decodedText+' tidak ditemukan!');}}},(errorMessage)=>{}).catch(err=>{alert('Gagal buka kamera: '+err);stopScanner();});}
 function resetLaporan(){if(confirm('Reset laporan?')){db.laporan=[];save();tampilLaporan();}}
 function simpanSetting(){db.nama=document.getElementById('inputNamaWarung').value||"WARUNG IRWAN MARINIR";db.batasStok=parseInt(document.getElementById('inputBatasStok').value)||5;save();show('kasir');alert('Pengaturan Tersimpan!');}
-loadLocal(); show('kasir');
+
+auth.onAuthStateChanged(user=>{if(user &&!modeGuest){loadData();}});
 </script>
 </body>
-  </html>
+</html>
