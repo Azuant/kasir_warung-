@@ -3,27 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WARUNG IRWAN MARINIR - KASIR PRO V7.0 FIREBASE</title>
+<title>WARUNG IRWAN MARINIR - KASIR PRO V8.0 FIREBASE</title>
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-<!-- PAKE FIREBASE V9 MODULAR -->
+
+<!-- FIREBASE V9 MODULAR + CONFIG KAMU -->
 <script type="module">
-  // Import the functions you need from the SDKs you need
   import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
   import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
   import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-  // Your web app's Firebase configuration
   const firebaseConfig = {
     apiKey: "AIzaSyCHwvOsZ8AjQpc64yHTxMxebRsqp88yx1Q",
     authDomain: "kasir-sembako-8972f.firebaseapp.com",
-    databaseURL: "https://kasir-sembako-8972f-default-rtdb.firebaseio.com",
+    databaseURL: "https://kasir-sembako-8972f-default-rtdb.asia-southeast1.firebasedatabase.app", // REGION SINGAPORE
     projectId: "kasir-sembako-8972f",
     storageBucket: "kasir-sembako-8972f.firebasestorage.app",
     messagingSenderId: "669992382893",
     appId: "1:669992382893:web:53cf405273cf45723b3124"
   };
 
-  // Initialize Firebase
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getDatabase(app);
@@ -79,10 +77,11 @@ canvas{background:var(--box); border-radius:8px; padding:10px; width:100%}
 
 <div id="halamanLogin">
   <div class="loginBox">
-    <h2>🔒 LOGIN KASIR FIREBASE</h2>
+    <h2>🔒 LOGIN KASIR CLOUD</h2>
     <input id="emailLogin" type="email" placeholder="Email Firebase" value="karnotoazuant@gmail.com">
     <input id="passLogin" type="password" placeholder="Password">
     <button class="hijau" onclick="loginFirebase()">MASUK</button>
+    <p style="text-align:center; font-size:12px;">Data tersimpan di Cloud Firebase</p>
   </div>
 </div>
 
@@ -106,6 +105,7 @@ canvas{background:var(--box); border-radius:8px; padding:10px; width:100%}
     <button class="ungu" onclick="show('grafik')">GRAFIK</button>
     <button class="merah" onclick="show('setting')">SETTING</button>
   </div>
+
   <div id="kasir" class="box">
     <button class="ungu" onclick="toggleScanner('kasir')">📷 SCAN BARCODE</button>
     <div id="reader-kasir" class="hidden"><button class="merah" onclick="stopScanner()" style="position:absolute; top:10px; right:10px; width:auto; z-index:1000">TUTUP KAMERA</button></div>
@@ -120,6 +120,7 @@ canvas{background:var(--box); border-radius:8px; padding:10px; width:100%}
     <button class="merah" onclick="batal()">BATAL TRANSAKSI</button>
     <div id="struk" class="hidden"></div>
   </div>
+
   <div id="barang" class="box hidden">
     <h3>TAMBAH / EDIT BARANG</h3>
     <button class="biru" onclick="toggleScanner('barang')">📷 SCAN BARCODE</button>
@@ -131,6 +132,7 @@ canvas{background:var(--box); border-radius:8px; padding:10px; width:100%}
     <button class="hijau" onclick="simpanBarang()">SIMPAN BARANG</button>
     <hr><h3>DAFTAR BARANG</h3><div id="listBarang" class="list"></div>
   </div>
+
   <div id="laporan" class="box hidden">
     <h3>📊 LAPORAN</h3>
     <p><b>Total Penjualan:</b> Rp<span id="totalJual">0</span></p>
@@ -147,7 +149,9 @@ canvas{background:var(--box); border-radius:8px; padding:10px; width:100%}
     <button class="merah" onclick="resetLaporan()">RESET LAPORAN</button>
     <hr><h4>RIWAYAT TRANSAKSI</h4><div id="riwayat" class="list"></div>
   </div>
+
   <div id="grafik" class="box hidden"><h3>📈 GRAFIK 7 HARI TERAKHIR</h3><canvas id="chart" height="250"></canvas></div>
+
   <div id="setting" class="box hidden">
     <h3>⚙️ PENGATURAN</h3>
     <input id="inputNamaWarung" placeholder="Nama Warung">
@@ -165,7 +169,7 @@ canvas{background:var(--box); border-radius:8px; padding:10px; width:100%}
 let db = {barang:[], laporan:[], nama:"WARUNG IRWAN MARINIR", tema:"terang", batasStok:5};
 let keranjang = []; let editId = null; let html5QrCode = null; let scannerAktif = null; let isScanning = false; let strukTerakhir = "";
 
-// LOGIN FIREBASE V9
+// LOGIN FIREBASE
 window.loginFirebase = () => {
   let email = document.getElementById('emailLogin').value;
   let pass = document.getElementById('passLogin').value;
@@ -187,7 +191,7 @@ onAuthStateChanged(window.firebaseAuth, user => {
   }
 });
 
-// SINKRON FIREBASE V9
+// SINKRON FIREBASE
 function loadDataFirebase(){
   onValue(window.firebaseDB.dbRef, (snapshot) => {
     if(snapshot.exists()) db = snapshot.val();
@@ -198,14 +202,10 @@ function loadDataFirebase(){
 }
 function saveToFirebase(){ set(window.firebaseDB.dbRef, db); }
 
-// SEMUA FUNGSI SAMA, TINGGAL PAKE
+// FUNGSI UTAMA
 function toggleTema(){document.body.classList.toggle('dark');db.tema=document.body.classList.contains('dark')?'gelap':'terang';saveToFirebase();}
 function show(id){stopScanner();document.querySelectorAll('.box').forEach(b=>{if(b.id)b.classList.add('hidden')});document.getElementById(id).classList.remove('hidden');document.getElementById('namaWarungHeader').innerText=db.nama.toUpperCase() + " - SELAMAT DATANG";document.getElementById('inputNamaWarung').value=db.nama;document.getElementById('inputBatasStok').value=db.batasStok;if(id=='kasir')tampilKasir();if(id=='barang')tampilBarang();if(id=='laporan')tampilLaporan();if(id=='grafik')gambarGrafik();}
 function simpanBarang(){let k=document.getElementById('kode').value;let n=document.getElementById('nama').value;let h=parseInt(document.getElementById('harga').value);let s=parseInt(document.getElementById('stok').value);if(!n||!h||s<0)return alert('Isi lengkap!');if(editId){let b=db.barang.find(x=>x.id==editId);b.kode=k;b.nama=n;b.harga=h;b.stok=s;editId=null;}else{db.barang.push({id:Date.now(),kode:k,nama:n,harga:h,stok:s});}saveToFirebase();document.getElementById('kode').value='';document.getElementById('nama').value='';document.getElementById('harga').value='';document.getElementById('stok').value='';tampilBarang();alert('Tersimpan ke Cloud!');}
-// COPY SEMUA FUNGSI DARI KODE LAMA KAMU DARI SINI KE BAWAH
-// tampilBarang, editBarang, hapusBarang, tampilKasir, add, bayar, dll
-// INTINYA GANTI `save()` JADI `saveToFirebase()`
-
 async function stopScanner(){if(html5QrCode && isScanning){isScanning=false;try{await html5QrCode.stop();}catch(e){}html5QrCode.clear();html5QrCode=null;}document.querySelectorAll('[id^=reader]').forEach(r=>r.classList.add('hidden'));scannerAktif=null;}
 function tampilBarang(){let html='';db.barang.forEach(b=>{let stokBadge;if(b.stok<=0){stokBadge='<span class="badge">HABIS</span>';}else if(b.stok<=db.batasStok){stokBadge='<span class="badge kuning">TIPIS</span>';}else{stokBadge='<span class="badge hijau">AMAN</span>';}html+=`<div class="item"><div class="info"><b>${b.nama}</b> ${stokBadge}<br><small>Kode:${b.kode||'-'} | Stok: ${b.stok} | Rp${b.harga.toLocaleString()}</small></div><div class="btn-group"><button class="kuning" onclick="editBarang(${b.id})">Edit</button><button class="merah" onclick="hapusBarang(${b.id})">Hapus</button></div></div>`;});document.getElementById('listBarang').innerHTML=html||'Belum ada barang';}
 function editBarang(id){let b=db.barang.find(x=>x.id==id);document.getElementById('kode').value=b.kode||'';document.getElementById('nama').value=b.nama;document.getElementById('harga').value=b.harga;document.getElementById('stok').value=b.stok;editId=id;show('barang');}
