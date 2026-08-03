@@ -52,9 +52,8 @@
 </div>
 
 <script>
-// === WAJIB GANTI DENGAN PUNYA KAMU ===
 const SUPABASE_URL = "https://ofrtchcbeectkythnolc.supabase.co"
-const SUPABASE_KEY = ""sb_publishable_SlGT-krHVt-jSNIj9qGbyg_uLvr-WyS // <-- ambil di Settings > API
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mcnRjaGNiZWVjdGt5dGhub2xjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3MDg2NDksImV4cCI6MjEwMTI4NDY0OX0.56A0fN7O3NDyCLs9ET9csuumFIhwfPYel0eBSH_3-WU"
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
@@ -111,13 +110,7 @@ async function bayar() {
     
     const { data, error } = await supabase
         .from('transaksi')
-        .insert([
-            { 
-                items: keranjang, 
-                total: total,
-                waktu: new Date().toISOString()
-            }
-        ])
+        .insert([{ items: keranjang, total: total, waktu: new Date().toISOString() }])
 
     if(error) {
         showStatus('Gagal Simpan: ' + error.message, 'gagal')
