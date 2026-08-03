@@ -11,10 +11,7 @@
 body.dark{--bg:#121212;--box:#1E1E1E;--text:#E0E0E0;--primary:#42A5F5;--border:#333;}
 *{box-sizing:border-box;}
 body{font-family:'Segoe UI',Arial;margin:0;background:var(--bg);color:var(--text);}
-.header{background:var(--primary);color:white;padding:0;text-align:left;font-weight:bold;position:sticky;top:0;z-index:10;}
-.running-text{width:calc(100% - 110px);white-space:nowrap;overflow:hidden;line-height:50px;}
-.running-text span{display:inline-block;padding-left:100%;animation:jalan 10s linear infinite;font-size:20px;letter-spacing:2px;}
-@keyframes jalan{0%{transform:translateX(0);}100%{transform:translateX(-100%);}}
+.header{background:var(--primary);color:white;padding:15px;text-align:center;font-weight:bold;font-size:20px;position:sticky;top:0;z-index:10;}
 .btn-header{position:absolute;top:10px;right:10px;z-index:11;display:flex;gap:5px;}
 .wrap{padding:10px;max-width:1200px;margin:auto;}
 .box{background:var(--box);border-radius:10px;padding:15px;margin-bottom:10px;box-shadow:0 2px 5px rgba(0,0,0,0.1);}
@@ -25,18 +22,10 @@ button.hijau{background:#2E7D32;} button.merah{background:#C62828;} button.kunin
 .menu{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
 .list{max-height:400px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;}
 .item{display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid var(--border);}
-.btn-group{display:flex;gap:5px;}
-.btn-group button{width:auto;padding:8px 14px;font-size:14px;margin:0;}
-.badge{background:#C62828;color:white;padding:2px 6px;border-radius:12px;font-size:11px;margin-left:5px;font-weight:bold;}
-.badge.kuning{background:#F9A825;color:#000;}
-.badge.hijau{background:#2E7D32;color:#000;}
 .total{font-size:32px;color:var(--primary);font-weight:bold;text-align:center;}
 .keranjang-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--border);}
 .hidden{display:none;}
-#struk{font-family:monospace;font-size:14px;white-space:pre-line;background:var(--bg);padding:10px;border-radius:8px;}
-canvas{background:var(--box);border-radius:8px;padding:10px;width:100%;}
-#reader-kasir,#reader-barang{width:100%;border-radius:10px;overflow:hidden;margin-top:10px;min-height:250px;background:#000;}
-.filter-box{padding:10px;background:var(--box);border-radius:8px;margin:10px 0;}
+#reader-kasir{width:100%;border-radius:10px;overflow:hidden;margin-top:10px;min-height:250px;background:#000;position:relative;}
 #halamanLogin{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--primary);display:flex;justify-content:center;align-items:center;}
 .loginBox{background:var(--box);padding:30px;border-radius:15px;width:90%;max-width:400px;box-shadow:0 5px 20px rgba(0,0,0,0.2);}
 .loginBox h2{text-align:center;margin-bottom:20px;color:var(--primary);}
@@ -55,9 +44,7 @@ canvas{background:var(--box);border-radius:8px;padding:10px;width:100%;}
 </div>
 
 <div id="appUtama" class="hidden">
- <div class="header">
-  <div class="running-text"><span id="namaWarungHeader">WARUNG IRWAN MARINIR - SELAMAT DATANG</span></div>
- </div>
+ <div class="header">WARUNG IRWAN MARINIR</div>
  <div class="btn-header">
   <button onclick="logout()" style="width:auto;padding:8px 12px;background:#C62828;">🚪</button>
   <button onclick="toggleTema()" style="width:auto;padding:8px 12px;">🌙</button>
@@ -68,28 +55,27 @@ canvas{background:var(--box);border-radius:8px;padding:10px;width:100%;}
    <button onclick="show('kasir')">KASIR</button>
    <button class="hijau" onclick="show('barang')">BARANG</button>
    <button class="kuning" onclick="show('laporan')">LAPORAN</button>
-   <button class="ungu" onclick="show('grafik')">GRAFIK</button>
-   <button class="merah" onclick="show('setting')">SETTING</button>
   </div>
 
   <div id="kasir" class="box">
-   <button class="ungu" onclick="toggleScanner('kasir')">🔍 SCAN BARCODE</button>
+   <button class="ungu" onclick="toggleScanner()">🔍 SCAN BARCODE</button>
    <div id="reader-kasir" class="hidden"><button class="merah" onclick="stopScanner()" style="position:absolute;top:10px;right:10px;z-index:2;width:auto;">TUTUP</button></div>
    <input id="cari" type="text" placeholder="🔍 Cari nama barang..." onkeyup="tampilKasir()">
    <div id="listBarangKasir" class="list"></div>
    <h3>KERANJANG</h3><div id="keranjang">Kosong</div>
    <h2 class="total">TOTAL: Rp<span id="total">0</span></h2>
-   <button class="hijau" onclick="bayar()">BAYAR & CETAK STRUK</button>
+   <button class="hijau" onclick="bayar()">BAYAR & SIMPAN</button>
   </div>
  </div>
 </div>
 
 <script>
 const SUPABASE_URL = 'https://ofrtchcbeectkythnolc.supabase.co';
-const SUPABASE_KEY = 'PASTE_ANON_KEY_KAMU_DISINI'; // <-- GANTI INI DULU
+const SUPABASE_KEY = 'sb_publishable_SlGT-krHVt-jSNIj9qGbyg_uLvr-WyS'; // KEY KAMU UDAH MASUK
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let keranjang = [];
+let semuaBarang = [];
 let scanner;
 
 function cekLogin(){
@@ -103,10 +89,73 @@ function cekLogin(){
 }
 function logout(){ location.reload(); }
 function show(id){ document.querySelectorAll('.wrap .box').forEach(b=>b.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
-async function tampilKasir(){ /* isi fungsi ambil dari supabase */ }
-async function bayar(){ /* isi fungsi insert ke supabase */ }
 function toggleTema(){ document.body.classList.toggle('dark'); }
-function toggleScanner(id){} function stopScanner(){}
+
+async function tampilKasir(){
+ const cari = document.getElementById('cari').value;
+ const { data, error } = await supabase.from('barang').select('*').ilike('nama', `%${cari}%`).order('nama');
+ if(error){ alert('Gagal ambil data: '+error.message); return; }
+ semuaBarang = data;
+ let html = '';
+ data.forEach(b=>{
+  html += `<div class="item">
+   <div><b>${b.nama}</b><br>Rp${b.harga_jual} | Stok: ${b.stok}</div>
+   <button class="hijau" onclick="tambahKeranjang(${b.id})">+</button>
+  </div>`;
+ });
+ document.getElementById('listBarangKasir').innerHTML = html || 'Barang tidak ada';
+}
+
+function tambahKeranjang(id){
+ let barang = semuaBarang.find(b=>b.id===id);
+ let item = keranjang.find(k=>k.id===id);
+ if(item){ item.qty++; } else { keranjang.push({...barang, qty:1}); }
+ renderKeranjang();
+}
+
+function renderKeranjang(){
+ let html = ''; let total = 0;
+ keranjang.forEach(k=>{
+  total += k.harga_jual * k.qty;
+  html += `<div class="keranjang-item"><span>${k.nama} x${k.qty}</span><span>Rp${k.harga_jual*k.qty}</span></div>`;
+ });
+ document.getElementById('keranjang').innerHTML = html || 'Kosong';
+ document.getElementById('total').innerText = total.toLocaleString('id-ID');
+}
+
+async function bayar(){
+ if(keranjang.length===0){ alert('Keranjang kosong'); return; }
+ const total = keranjang.reduce((sum,k)=>sum+k.harga_jual*k.qty,0);
+ const { data: trx, error: errTrx } = await supabase.from('transaksi').insert({total:total, tanggal:new Date()}).select().single();
+ if(errTrx){ alert('Gagal simpan transaksi: '+errTrx.message); return; }
+
+ for(let k of keranjang){
+  await supabase.from('detail_transaksi').insert({
+   transaksi_id: trx.id,
+   barang_id: k.id,
+   qty: k.qty,
+   harga: k.harga_jual,
+   nama_produk: k.nama // WAJIB ADA KOLOM INI DI SUPABASE
+  });
+  await supabase.from('barang').update({stok:k.stok-k.qty}).eq('id',k.id);
+ }
+ alert('Transaksi Berhasil! ID: '+trx.id);
+ keranjang = []; renderKeranjang(); tampilKasir();
+}
+
+function toggleScanner(){
+ const reader = document.getElementById('reader-kasir');
+ reader.classList.toggle('hidden');
+ if(!reader.classList.contains('hidden')){
+  scanner = new Html5Qrcode("reader-kasir");
+  scanner.start({ facingMode: "environment" }, { fps: 10 }, (decodedText)=>{
+   document.getElementById('cari').value = decodedText;
+   tampilKasir();
+   stopScanner();
+  });
+ }
+}
+function stopScanner(){ if(scanner){ scanner.stop(); document.getElementById('reader-kasir').classList.add('hidden'); }
 </script>
 </body>
 </html>
