@@ -3,159 +3,140 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WARUNG IRWAN MARINIR - KASIR PRO V7.0 SUPABASE</title>
-<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<title>Kasir Warung</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-:root{--bg:#F5F5F5;--box:#fff;--text:#000;--primary:#1565C0;--border:#ddd;}
-body.dark{--bg:#121212;--box:#1E1E1E;--text:#E0E0E0;--primary:#42A5F5;--border:#333;}
-*{box-sizing:border-box;}
-body{font-family:'Segoe UI',Arial;margin:0;background:var(--bg);color:var(--text);}
-.header{background:var(--primary);color:white;padding:15px;text-align:center;font-weight:bold;font-size:20px;position:sticky;top:0;z-index:10;}
-.btn-header{position:absolute;top:10px;right:10px;z-index:11;display:flex;gap:5px;}
-.wrap{padding:10px;max-width:1200px;margin:auto;}
-.box{background:var(--box);border-radius:10px;padding:15px;margin-bottom:10px;box-shadow:0 2px 5px rgba(0,0,0,0.1);}
-input,button{width:100%;padding:12px;margin:5px 0;border-radius:5px;border:1px solid var(--border);font-size:16px;background:var(--box);color:var(--text);}
-button{background:var(--primary);color:white;border:none;font-weight:bold;cursor:pointer;transition:0.2s;}
-button:hover{opacity:0.85;}
-button.hijau{background:#2E7D32;} button.merah{background:#C62828;} button.kuning{background:#F9A825;color:#000;} button.ungu{background:#6A1B9A;}
-.menu{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
-.list{max-height:400px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;}
-.item{display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid var(--border);}
-.total{font-size:32px;color:var(--primary);font-weight:bold;text-align:center;}
-.keranjang-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--border);}
-.hidden{display:none;}
-#reader-kasir{width:100%;border-radius:10px;overflow:hidden;margin-top:10px;min-height:250px;background:#000;position:relative;}
-#halamanLogin{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--primary);display:flex;justify-content:center;align-items:center;}
-.loginBox{background:var(--box);padding:30px;border-radius:15px;width:90%;max-width:400px;box-shadow:0 5px 20px rgba(0,0,0,0.2);}
-.loginBox h2{text-align:center;margin-bottom:20px;color:var(--primary);}
+    * { box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; margin: 0; }
+    .container { max-width: 500px; margin: auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    h1 { text-align: center; color: #2d6a4f; margin-bottom: 20px; }
+    label { font-weight: bold; font-size: 14px; color: #333; }
+    input { width: 100%; padding: 12px; margin: 6px 0 15px 0; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; }
+    button { width: 100%; padding: 14px; margin: 8px 0; border-radius: 8px; border: none; cursor: pointer; font-size: 16px; font-weight: bold; }
+    .btn-tambah { background: #40916c; color: white; }
+    .btn-tambah:hover { background: #2d6a4f; }
+    .btn-bayar { background: #ff6b35; color: white; }
+    .btn-bayar:hover { background: #e85d2c; }
+    .keranjang-box { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px; min-height: 100px; }
+    .item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #ddd; }
+    .total { font-size: 22px; font-weight: bold; text-align: right; margin-top: 15px; color: #2d6a4f; }
+    #status { text-align: center; margin-top: 15px; font-weight: bold; padding: 10px; border-radius: 8px; }
+    .sukses { background: #d4edda; color: #155724; }
+    .gagal { background: #f8d7da; color: #721c24; }
 </style>
 </head>
 <body>
+<div class="container">
+    <h1>Kasir Warung</h1>
+    
+    <label>Nama Barang</label>
+    <input type="text" id="nama" placeholder="Contoh: Mie Sedap">
+    
+    <label>Harga</label>
+    <input type="number" id="harga" placeholder="Contoh: 3000">
+    
+    <label>Qty</label>
+    <input type="number" id="qty" placeholder="Contoh: 1" value="1">
+    
+    <button class="btn-tambah" onclick="tambahItem()">+ Tambah ke Keranjang</button>
 
-<div id="halamanLogin">
- <div class="loginBox">
-  <h2>🔒 LOGIN KASIR</h2>
-  <input id="userLogin" type="text" placeholder="Username" value="admin">
-  <input id="passLogin" type="password" placeholder="Password" value="P">
-  <button class="hijau" onclick="cekLogin()">MASUK</button>
-  <p style="text-align:center;font-size:12px;margin-top:10px;">Default: admin / P</p>
- </div>
-</div>
+    <h3>Keranjang Belanja</h3>
+    <div class="keranjang-box" id="keranjang">
+        <p style="text-align:center; color:#999;">Keranjang kosong</p>
+    </div>
+    
+    <div class="total">Total: Rp <span id="total">0</span></div>
 
-<div id="appUtama" class="hidden">
- <div class="header">WARUNG IRWAN MARINIR</div>
- <div class="btn-header">
-  <button onclick="logout()" style="width:auto;padding:8px 12px;background:#C62828;">🚪</button>
-  <button onclick="toggleTema()" style="width:auto;padding:8px 12px;">🌙</button>
- </div>
-
- <div class="wrap">
-  <div class="box menu">
-   <button onclick="show('kasir')">KASIR</button>
-   <button class="hijau" onclick="show('barang')">BARANG</button>
-   <button class="kuning" onclick="show('laporan')">LAPORAN</button>
-  </div>
-
-  <div id="kasir" class="box">
-   <button class="ungu" onclick="toggleScanner()">🔍 SCAN BARCODE</button>
-   <div id="reader-kasir" class="hidden"><button class="merah" onclick="stopScanner()" style="position:absolute;top:10px;right:10px;z-index:2;width:auto;">TUTUP</button></div>
-   <input id="cari" type="text" placeholder="🔍 Cari nama barang..." onkeyup="tampilKasir()">
-   <div id="listBarangKasir" class="list"></div>
-   <h3>KERANJANG</h3><div id="keranjang">Kosong</div>
-   <h2 class="total">TOTAL: Rp<span id="total">0</span></h2>
-   <button class="hijau" onclick="bayar()">BAYAR & SIMPAN</button>
-  </div>
- </div>
+    <button class="btn-bayar" onclick="bayar()">BAYAR & SIMPAN</button>
+    <div id="status"></div>
 </div>
 
 <script>
-const SUPABASE_URL = 'https://ofrtchcbeectkythnolc.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_SlGT-krHVt-jSNIj9qGbyg_uLvr-WyS'; // KEY KAMU UDAH MASUK
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// === WAJIB GANTI DENGAN PUNYA KAMU ===
+const SUPABASE_URL = "https://ofrtchcbeectkythnolc.supabase.co"
+const SUPABASE_KEY = "PASTE_ANON_PUBLIC_KEY_KAMU_DISINI" // <-- ambil di Settings > API
 
-let keranjang = [];
-let semuaBarang = [];
-let scanner;
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
-function cekLogin(){
- const u = document.getElementById('userLogin').value;
- const p = document.getElementById('passLogin').value;
- if(u === 'admin' && p === 'P'){
-  document.getElementById('halamanLogin').classList.add('hidden');
-  document.getElementById('appUtama').classList.remove('hidden');
-  tampilKasir();
- } else { alert('Username/Password salah'); }
-}
-function logout(){ location.reload(); }
-function show(id){ document.querySelectorAll('.wrap .box').forEach(b=>b.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
-function toggleTema(){ document.body.classList.toggle('dark'); }
+let keranjang = []
+let total = 0
 
-async function tampilKasir(){
- const cari = document.getElementById('cari').value;
- const { data, error } = await supabase.from('barang').select('*').ilike('nama', `%${cari}%`).order('nama');
- if(error){ alert('Gagal ambil data: '+error.message); return; }
- semuaBarang = data;
- let html = '';
- data.forEach(b=>{
-  html += `<div class="item">
-   <div><b>${b.nama}</b><br>Rp${b.harga_jual} | Stok: ${b.stok}</div>
-   <button class="hijau" onclick="tambahKeranjang(${b.id})">+</button>
-  </div>`;
- });
- document.getElementById('listBarangKasir').innerHTML = html || 'Barang tidak ada';
+function tambahItem() {
+    const nama = document.getElementById('nama').value.trim()
+    const harga = parseInt(document.getElementById('harga').value)
+    const qty = parseInt(document.getElementById('qty').value)
+
+    if(!nama || !harga || !qty || harga <= 0 || qty <= 0) {
+        alert('Isi semua data dengan benar!')
+        return
+    }
+
+    keranjang.push({nama, harga, qty, subtotal: harga * qty})
+    renderKeranjang()
+    
+    document.getElementById('nama').value = ''
+    document.getElementById('harga').value = ''
+    document.getElementById('qty').value = '1'
+    document.getElementById('nama').focus()
 }
 
-function tambahKeranjang(id){
- let barang = semuaBarang.find(b=>b.id===id);
- let item = keranjang.find(k=>k.id===id);
- if(item){ item.qty++; } else { keranjang.push({...barang, qty:1}); }
- renderKeranjang();
+function renderKeranjang() {
+    const div = document.getElementById('keranjang')
+    div.innerHTML = ''
+    total = 0
+    
+    if(keranjang.length === 0) {
+        div.innerHTML = '<p style="text-align:center; color:#999;">Keranjang kosong</p>'
+    } else {
+        keranjang.forEach((item) => {
+            total += item.subtotal
+            div.innerHTML += `
+                <div class="item">
+                    <span>${item.nama} x${item.qty}</span>
+                    <span>Rp ${item.subtotal.toLocaleString('id-ID')}</span>
+                </div>
+            `
+        })
+    }
+    document.getElementById('total').innerText = total.toLocaleString('id-ID')
 }
 
-function renderKeranjang(){
- let html = ''; let total = 0;
- keranjang.forEach(k=>{
-  total += k.harga_jual * k.qty;
-  html += `<div class="keranjang-item"><span>${k.nama} x${k.qty}</span><span>Rp${k.harga_jual*k.qty}</span></div>`;
- });
- document.getElementById('keranjang').innerHTML = html || 'Kosong';
- document.getElementById('total').innerText = total.toLocaleString('id-ID');
+async function bayar() {
+    if(keranjang.length === 0) {
+        alert('Keranjang kosong!')
+        return
+    }
+
+    showStatus('Menyimpan...', '')
+    
+    const { data, error } = await supabase
+        .from('transaksi')
+        .insert([
+            { 
+                items: keranjang, 
+                total: total,
+                waktu: new Date().toISOString()
+            }
+        ])
+
+    if(error) {
+        showStatus('Gagal Simpan: ' + error.message, 'gagal')
+        console.error(error)
+    } else {
+        showStatus('Berhasil Disimpan!', 'sukses')
+        keranjang = []
+        renderKeranjang()
+    }
 }
 
-async function bayar(){
- if(keranjang.length===0){ alert('Keranjang kosong'); return; }
- const total = keranjang.reduce((sum,k)=>sum+k.harga_jual*k.qty,0);
- const { data: trx, error: errTrx } = await supabase.from('transaksi').insert({total:total, tanggal:new Date()}).select().single();
- if(errTrx){ alert('Gagal simpan transaksi: '+errTrx.message); return; }
-
- for(let k of keranjang){
-  await supabase.from('detail_transaksi').insert({
-   transaksi_id: trx.id,
-   barang_id: k.id,
-   qty: k.qty,
-   harga: k.harga_jual,
-   nama_produk: k.nama // WAJIB ADA KOLOM INI DI SUPABASE
-  });
-  await supabase.from('barang').update({stok:k.stok-k.qty}).eq('id',k.id);
- }
- alert('Transaksi Berhasil! ID: '+trx.id);
- keranjang = []; renderKeranjang(); tampilKasir();
+function showStatus(pesan, tipe) {
+    const el = document.getElementById('status')
+    el.innerText = pesan
+    el.className = tipe
+    if(tipe === 'sukses') {
+        setTimeout(() => el.innerText = '', 3000)
+    }
 }
-
-function toggleScanner(){
- const reader = document.getElementById('reader-kasir');
- reader.classList.toggle('hidden');
- if(!reader.classList.contains('hidden')){
-  scanner = new Html5Qrcode("reader-kasir");
-  scanner.start({ facingMode: "environment" }, { fps: 10 }, (decodedText)=>{
-   document.getElementById('cari').value = decodedText;
-   tampilKasir();
-   stopScanner();
-  });
- }
-}
-function stopScanner(){ if(scanner){ scanner.stop(); document.getElementById('reader-kasir').classList.add('hidden'); }
 </script>
 </body>
 </html>
